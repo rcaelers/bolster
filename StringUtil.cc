@@ -69,7 +69,7 @@ StringUtil::join(const vector<string> &parts, string separator)
 {
   string result = "";
   
-  if (parts.size() >= 0)
+  if (parts.size() > 0)
     {
       result = parts[0];
       for (size_t i = 1; i < parts.size(); i++)

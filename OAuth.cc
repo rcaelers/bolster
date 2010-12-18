@@ -43,9 +43,7 @@ OAuth::request_temporary_credentials(const string &http_method,
 
   string key = consumer_key + "&";
   string headers = create_headers(http_method, uri, key, parameters);
-  
-  cout << headers << endl;
-  
+
   return headers;
 }
 
@@ -55,17 +53,11 @@ OAuth::request_token_credentials(const string &http_method, const string &uri, c
 {
   RequestParams parameters;
 
-  string requestUrl;
-  string key;
-
   parameters["oauth_token"] = token;
   parameters["oauth_verifier"] = pin_code;
   
-  key = consumer_secret + "&" + token_secret;
-  
-  string headers = create_headers(http_method, requestUrl, key, parameters);
-
-  cout << headers << endl;
+  string key = consumer_secret + "&" + token_secret;
+  string headers = create_headers(http_method, uri, key, parameters);
 
   return headers;
 }
@@ -75,16 +67,11 @@ OAuth::request(const string &http_method, const string &uri, const string &token
 {
   RequestParams parameters;
 
-  string requestUrl;
-  string key;
-
   parameters["oauth_token"] = token;
-  key = consumer_secret + "&" + token_secret;
-  
+
+  string key = consumer_secret + "&" + token_secret;
   string headers = create_headers(http_method, uri, key, parameters);
-
-  cout << headers << endl;
-
+  
   return headers;
 }
 
@@ -94,6 +81,7 @@ OAuth::escape_uri(const string &uri) const
 {
   return g_uri_escape_string(uri.c_str(), NULL, TRUE);
 }
+
 
 string
 OAuth::unescape_uri(const string &uri) const
@@ -152,24 +140,18 @@ OAuth::normalize_uri(const string &uri, RequestParams &parameters) const
               vector<string> param_elements;
               StringUtil::split(query_params[i], '=', param_elements);
 
-              cout << param_elements.size() << endl;
               if (param_elements.size() == 2)
                 {
                   parameters[param_elements[0]] = param_elements[1];
-
-                  cout << param_elements[0] << " " <<  param_elements[1] << endl;
                 }
             }
-
 
           g_free(u->query);
           u->query = NULL;
         }
-      char *new_uri = soup_uri_to_string(u, FALSE);
       
+      char *new_uri = soup_uri_to_string(u, FALSE);
       ret = new_uri;
-
-      cout << "new uro " << ret << endl;
       g_free(new_uri);
     }
  
@@ -183,7 +165,6 @@ OAuth::parameters_to_string(const RequestParams &parameters, ParameterMode mode)
   list<string> sorted;
   string sep;
   string quotes;
-  string assign;
   bool only_oauth;
   
   switch (mode)
@@ -191,21 +172,18 @@ OAuth::parameters_to_string(const RequestParams &parameters, ParameterMode mode)
     case ParameterModeRequest:
       quotes = "";
       sep = "&";
-      assign = "=";
       only_oauth = false;
       break;
       
     case ParameterModeHeader:
       quotes = "\"";
       sep = ",";
-      assign = "=";
       only_oauth = true;
       break;
       
     case ParameterModeSignatureBase:
       quotes = "";
       sep = "&";
-      assign = "=";
       only_oauth = false;
       break;
     }
@@ -215,7 +193,7 @@ OAuth::parameters_to_string(const RequestParams &parameters, ParameterMode mode)
       string key = it->first;
       if (!only_oauth || key.find("oauth_") == 0)
         {
-          string param = key + assign + quotes + escape_uri(it->second) +  quotes;
+          string param = key + "=" + quotes + escape_uri(it->second) +  quotes;
           sorted.push_back(param);
         }
     }
@@ -245,14 +223,14 @@ OAuth::encrypt(const std::string &input, const std::string &key) const
   hmac.Final(digest);
 
   CryptoPP::Base64Encoder base64; 
-  base64.Put(digest, sizeof(digest) ); //use the digest to base64 encode
+  base64.Put(digest, sizeof(digest));
   base64.MessageEnd();
   base64.MessageSeriesEnd();
   
   unsigned int size = (sizeof(digest) + 2 - ((sizeof(digest) + 2) % 3)) * 4 / 3;
   uint8_t* encodedValues = new uint8_t[size + 1];
   
-  base64.Get( encodedValues, size );
+  base64.Get(encodedValues, size);
   encodedValues[size] = 0;
   std::string encodedString = (char*)encodedValues;
 
@@ -280,15 +258,11 @@ OAuth::create_headers(const string &http_method, const string &uri, const string
                                    escape_uri(normalized_parameters)
                                    );
 
-  cout << "BASE " << signature_base_string << endl;
-  
   string signature = encrypt(signature_base_string, key);
 
   parameters["oauth_signature"] = signature;
   
   string header = parameters_to_string(parameters, ParameterModeHeader);
 
-  cout << "URL " << normalized_uri << "&" << parameters_to_string(parameters, ParameterModeRequest) << endl;
-    
   return header;
 }

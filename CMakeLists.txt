@@ -24,6 +24,6 @@ include_directories(
     ${KEYRING_INCLUDE_DIRS}
 )
 
-add_definitions(-Wall -g -O0)
+add_definitions(-W -Wall -Wextra -g -O0)
 add_executable(oauth OAuth.cc StringUtil.cc main.cc)
 target_link_libraries(oauth ${GLIB_LIBRARIES} ${CRYPTO_LIBRARIES} ${SOUP_LIBRARIES} ${DBUS_LIBRARIES} ${KEYRING_LIBRARIES})
