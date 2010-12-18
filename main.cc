@@ -34,44 +34,44 @@ static void
 debug_print_headers (const char *name, const char *value, gpointer user_data)
 {
   (void) user_data;
-	g_debug ("\t%s: %s\n", name, value);
+  g_debug ("\t%s: %s\n", name, value);
 }
 
 void
 couch_init()
 {
-	char *uri = NULL;
-	DBusGConnection *bus;
-	DBusGProxy *proxy;
-	gint port;
-	GError *error;
-	gboolean success;
-	SoupMessage *http_message;
-	guint status;
+  char *uri = NULL;
+  DBusGConnection *bus;
+  DBusGProxy *proxy;
+  gint port;
+  GError *error;
+  gboolean success;
+  SoupMessage *http_message;
+  guint status;
 
-	error = NULL;
-	bus = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
-	if (error)
+  error = NULL;
+  bus = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
+  if (error)
     {
       g_warning("Couldn't get session bus: %s", error->message);
       g_error_free(error);
       return;
     }
 
-	proxy = dbus_g_proxy_new_for_name(bus,
+  proxy = dbus_g_proxy_new_for_name(bus,
                                     "org.desktopcouch.CouchDB",
                                     "/",
                                     "org.desktopcouch.CouchDB");
 
-	error = NULL;
-	success = dbus_g_proxy_call(proxy, "getPort", &error,
+  error = NULL;
+  success = dbus_g_proxy_call(proxy, "getPort", &error,
                               G_TYPE_INVALID,
                               G_TYPE_INT, &port, G_TYPE_INVALID);
 
-	g_object_unref(G_OBJECT(proxy));
-	dbus_g_connection_unref(bus);
+  g_object_unref(G_OBJECT(proxy));
+  dbus_g_connection_unref(bus);
 
-	if (success)
+  if (success)
     {
       GnomeKeyringAttributeList *attrs;
       GnomeKeyringResult result;
@@ -179,6 +179,9 @@ couch_init()
 
 int main(int argc, char **argv)
 {
+  (void) argc;
+  (void) argv;
+  
   g_type_init ();
 
   // OAuth oauth("Hello", "World", "http://api.krandor.org/callback", "HMAC-SHA1");
