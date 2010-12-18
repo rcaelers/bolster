@@ -286,7 +286,7 @@ OAuth::create_headers(const string &http_method, const string &uri, const string
 
 	parameters["oauth_signature"] = signature;
   
-  string header = "Authorization: OAuth " + parameters_to_string(parameters, ParameterModeHeader);
+  string header = parameters_to_string(parameters, ParameterModeHeader);
 
   cout << "URL " << normalized_uri << "&" << parameters_to_string(parameters, ParameterModeRequest) << endl;
     
