@@ -37,13 +37,13 @@ OAuth::request_temporary_credentials(const string &http_method,
                                      const string &uri
                                      )
 {
-	RequestParams parameters;
+  RequestParams parameters;
 
-	parameters["oauth_callback"] = callback_uri;
+  parameters["oauth_callback"] = callback_uri;
 
   string key = consumer_key + "&";
-	string headers = create_headers(http_method, uri, key, parameters);
-	
+  string headers = create_headers(http_method, uri, key, parameters);
+  
   cout << headers << endl;
   
   return headers;
@@ -53,17 +53,17 @@ OAuth::request_temporary_credentials(const string &http_method,
 string
 OAuth::request_token_credentials(const string &http_method, const string &uri, const string &token, const string &token_secret, const string &pin_code)
 {
-	RequestParams parameters;
+  RequestParams parameters;
 
-	string requestUrl;
-	string key;
+  string requestUrl;
+  string key;
 
-	parameters["oauth_token"] = token;
+  parameters["oauth_token"] = token;
   parameters["oauth_verifier"] = pin_code;
   
-	key = consumer_secret + "&" + token_secret;
-	
-	string headers = create_headers(http_method, requestUrl, key, parameters);
+  key = consumer_secret + "&" + token_secret;
+  
+  string headers = create_headers(http_method, requestUrl, key, parameters);
 
   cout << headers << endl;
 
@@ -73,15 +73,15 @@ OAuth::request_token_credentials(const string &http_method, const string &uri, c
 string
 OAuth::request(const string &http_method, const string &uri, const string &token, const string &token_secret)
 {
-	RequestParams parameters;
+  RequestParams parameters;
 
-	string requestUrl;
-	string key;
+  string requestUrl;
+  string key;
 
-	parameters["oauth_token"] = token;
-	key = consumer_secret + "&" + token_secret;
-	
-	string headers = create_headers(http_method, uri, key, parameters);
+  parameters["oauth_token"] = token;
+  key = consumer_secret + "&" + token_secret;
+  
+  string headers = create_headers(http_method, uri, key, parameters);
 
   cout << headers << endl;
 
@@ -104,11 +104,11 @@ OAuth::unescape_uri(const string &uri) const
 string
 OAuth::get_timestamp()
 {
-	time_t now = time (NULL);
+  time_t now = time (NULL);
 
-	stringstream ss;
-	ss << now;
-	return ss.str();
+  stringstream ss;
+  ss << now;
+  return ss.str();
 }
 
 string
@@ -131,7 +131,7 @@ OAuth::get_nonce()
       nonce[i] = valid_chars[g_random_int_range(0, valid_chars_count + 1)];
     }
 
-	return nonce;
+  return nonce;
 }
 
 const string
@@ -204,8 +204,8 @@ OAuth::parameters_to_string(const RequestParams &parameters, ParameterMode mode)
       
     case ParameterModeSignatureBase:
       quotes = "";
-      sep = "&"; // %26";
-      assign = "="; // %3D";
+      sep = "&";
+      assign = "=";
       only_oauth = false;
       break;
     }
@@ -238,39 +238,39 @@ OAuth::parameters_to_string(const RequestParams &parameters, ParameterMode mode)
 std::string
 OAuth::encrypt(const std::string &input, const std::string &key) const
 {
-	uint8_t digest[CryptoPP::HMAC<CryptoPP::SHA1>::DIGESTSIZE];
+  uint8_t digest[CryptoPP::HMAC<CryptoPP::SHA1>::DIGESTSIZE];
 
-	CryptoPP::HMAC<CryptoPP::SHA1> hmac((uint8_t*)key.c_str(), key.size());
-	hmac.Update((uint8_t*)input.c_str(), input.size());
-	hmac.Final(digest);
+  CryptoPP::HMAC<CryptoPP::SHA1> hmac((uint8_t*)key.c_str(), key.size());
+  hmac.Update((uint8_t*)input.c_str(), input.size());
+  hmac.Final(digest);
 
-	CryptoPP::Base64Encoder base64; 
-	base64.Put(digest, sizeof(digest) ); //use the digest to base64 encode
-	base64.MessageEnd();
-	base64.MessageSeriesEnd();
+  CryptoPP::Base64Encoder base64; 
+  base64.Put(digest, sizeof(digest) ); //use the digest to base64 encode
+  base64.MessageEnd();
+  base64.MessageSeriesEnd();
   
-	unsigned int size = (sizeof(digest) + 2 - ((sizeof(digest) + 2) % 3)) * 4 / 3;
-	uint8_t* encodedValues = new uint8_t[size + 1];
+  unsigned int size = (sizeof(digest) + 2 - ((sizeof(digest) + 2) % 3)) * 4 / 3;
+  uint8_t* encodedValues = new uint8_t[size + 1];
   
-	base64.Get( encodedValues, size );
+  base64.Get( encodedValues, size );
   encodedValues[size] = 0;
-	std::string encodedString = (char*)encodedValues;
+  std::string encodedString = (char*)encodedValues;
 
-	return encodedString;
+  return encodedString;
 }
 
 
 string
 OAuth::create_headers(const string &http_method, const string &uri, const string &key, RequestParams &parameters)
 {
-	string timestamp = get_timestamp();
-	string nonce = get_nonce();
+  string timestamp = get_timestamp();
+  string nonce = get_nonce();
 
   parameters["oauth_consumer_key"] = consumer_key;
-	parameters["oauth_signature_method"] = signature_method;
-	parameters["oauth_timestamp"] = timestamp;
-	parameters["oauth_nonce"] = nonce;
-	parameters["oauth_version"] = oauth_version;
+  parameters["oauth_signature_method"] = signature_method;
+  parameters["oauth_timestamp"] = timestamp;
+  parameters["oauth_nonce"] = nonce;
+  parameters["oauth_version"] = oauth_version;
 
   string normalized_uri = normalize_uri(uri, parameters);
   string normalized_parameters = parameters_to_string(parameters, ParameterModeSignatureBase);
@@ -284,7 +284,7 @@ OAuth::create_headers(const string &http_method, const string &uri, const string
   
   string signature = encrypt(signature_base_string, key);
 
-	parameters["oauth_signature"] = signature;
+  parameters["oauth_signature"] = signature;
   
   string header = parameters_to_string(parameters, ParameterModeHeader);
 
@@ -292,8 +292,3 @@ OAuth::create_headers(const string &http_method, const string &uri, const string
     
   return header;
 }
-
-
-
-
-
