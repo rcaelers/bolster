@@ -1,0 +1,10 @@
+-*- org -*-
+
+* FIX [#B] Add const
+* TODO [#B] Add Exception handling
+* TODO [#B] Add asynchronous request
+* TODO [#C] Make token request asynchronous
+* TODO [#A] Check for memory leaks (valgrind)
+* TODO [#C] Remove libcrypto++
+* TODO [#B] Delegate escaping to IWebBackend
+

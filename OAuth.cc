@@ -15,64 +15,121 @@
 #include <libsoup/soup.h>
 
 #include "OAuth.hh"
+#include "IWebBackend.hh"
 #include "StringUtil.hh"
 
 using namespace std;
 
-OAuth::OAuth(const string &consumer_key,
-             const string &consumer_secret,
-             const string &callback_uri,
-             const string &signature_method)
-  : consumer_key(consumer_key),
-    consumer_secret(consumer_secret),
-    callback_uri(callback_uri),
-    signature_method(signature_method)
+OAuth::OAuth(IWebBackend *backend)
+  : backend(backend)
 {
   oauth_version = "1.0";
+  signature_method = "HMAC-SHA1";
+  callback = "oob";
 }
 
 
-string
-OAuth::request_temporary_credentials(const string &http_method,
-                                     const string &uri
-                                     )
+void
+OAuth::init(std::string consumer_key, std::string consumer_secret)
 {
-  RequestParams parameters;
+  this->consumer_key = consumer_key;
+  this->consumer_secret = consumer_secret;
 
-  parameters["oauth_callback"] = callback_uri;
-
-  string key = consumer_key + "&";
-  string headers = create_headers(http_method, uri, key, parameters);
-
-  return headers;
-}
-
-
-string
-OAuth::request_token_credentials(const string &http_method, const string &uri, const string &token, const string &token_secret, const string &pin_code)
-{
-  RequestParams parameters;
-
-  parameters["oauth_token"] = token;
-  parameters["oauth_verifier"] = pin_code;
+  request_temporary_credentials();
   
-  string key = consumer_secret + "&" + token_secret;
-  string headers = create_headers(http_method, uri, key, parameters);
-
-  return headers;
 }
 
-string
-OAuth::request(const string &http_method, const string &uri, const string &token, const string &token_secret)
+
+void
+OAuth::init(std::string consumer_key, std::string consumer_secret, std::string token_key, std::string token_secret)
+{
+  this->consumer_key = consumer_key;
+  this->consumer_secret = consumer_secret;
+  this->token_key = token_key;
+  this->token_secret = token_secret;
+}
+
+
+void
+OAuth::set_callback(std::string callback)
+{
+  this->callback = callback;
+}
+
+
+void
+OAuth::set_verifier(std::string verifier)
+{
+  this->verifier = verifier;
+}
+
+
+void
+OAuth::request_temporary_credentials()
 {
   RequestParams parameters;
 
-  parameters["oauth_token"] = token;
+  IWebBackend::ListenCallback cb;
 
-  string key = consumer_secret + "&" + token_secret;
-  string headers = create_headers(http_method, uri, key, parameters);
+  int port;
+  string path = "/oauth-verfied";
+  backend->listen(cb, path, port);
+
+  stringstream ss;
+  ss << "http://127.0.0.1:" << port << path;
   
-  return headers;
+  parameters["oauth_callback"] = ss.str();
+
+  string http_method = "POST";
+  string uri = "http://127.0.0.1:8888/oauth/request_token/";
+  
+  string oauth_header = create_headers(http_method, uri, parameters);
+
+  string response = backend->request(http_method, uri, "", oauth_header);
+
+  RequestParams response_parameters;
+  parse_query(response, response_parameters);
+
+  token_key = response_parameters["oauth_token"];
+  token_secret = response_parameters["oauth_token_secret"];
+
+  if (response_parameters["oauth_callback_confirmed"] != "true")
+    {
+      g_debug("oauth_callback_confirmed error");
+    }
+
+  request_resource_owner_authorization();
+}
+
+
+void
+OAuth::request_resource_owner_authorization()
+{
+  gchar *program = g_find_program_in_path("xdg-open");
+  if (program != NULL)
+    {
+      string command = ( string(program) +
+                         " http://127.0.0.1:8888/oauth/authorize/?oauth_token="
+                         + escape_uri(token_key)
+                         );
+  
+      
+      gint exit_code;
+      GError *error = NULL;
+      if (!g_spawn_command_line_sync(command.c_str(), NULL, NULL, &exit_code, &error) )
+        {
+          g_error_free(error);
+        }
+    }
+}
+
+
+string
+OAuth::get_request_header(const std::string &http_method, const std::string &uri) const
+{
+  RequestParams parameters;
+
+  return create_headers(http_method, uri, parameters);
 }
 
 
@@ -90,7 +147,7 @@ OAuth::unescape_uri(const string &uri) const
 }
 
 string
-OAuth::get_timestamp()
+OAuth::get_timestamp() const
 {
   time_t now = time (NULL);
 
@@ -100,7 +157,7 @@ OAuth::get_timestamp()
 }
 
 string
-OAuth::get_nonce()
+OAuth::get_nonce() const
 {
   static bool random_seeded = 1;
   const int nonce_size = 32;
@@ -116,7 +173,7 @@ OAuth::get_nonce()
 
   for (int i = 0; i < nonce_size; i++)
     {
-      nonce[i] = valid_chars[g_random_int_range(0, valid_chars_count + 1)];
+      nonce[i] = valid_chars[g_random_int_range(0, valid_chars_count)];
     }
 
   return nonce;
@@ -239,7 +296,9 @@ OAuth::encrypt(const std::string &input, const std::string &key) const
 
 
 string
-OAuth::create_headers(const string &http_method, const string &uri, const string &key, RequestParams &parameters)
+OAuth::create_headers(const string &http_method,
+                      const string &uri,
+                      RequestParams &parameters) const
 {
   string timestamp = get_timestamp();
   string nonce = get_nonce();
@@ -250,6 +309,17 @@ OAuth::create_headers(const string &http_method, const string &uri, const string
   parameters["oauth_nonce"] = nonce;
   parameters["oauth_version"] = oauth_version;
 
+  if (token_key != "")
+    {
+      parameters["oauth_token"] = token_key;
+    }
+
+  string key = consumer_secret + "&";
+  if (token_secret != "")
+    {
+      key += token_secret;
+    }
+  
   string normalized_uri = normalize_uri(uri, parameters);
   string normalized_parameters = parameters_to_string(parameters, ParameterModeSignatureBase);
  
@@ -258,11 +328,38 @@ OAuth::create_headers(const string &http_method, const string &uri, const string
                                    escape_uri(normalized_parameters)
                                    );
 
+  cout << "BASE " << signature_base_string << endl;
+  cout << "KEY " << key << endl;
+  
   string signature = encrypt(signature_base_string, key);
 
   parameters["oauth_signature"] = signature;
   
-  string header = parameters_to_string(parameters, ParameterModeHeader);
+  string header = "OAuth " + parameters_to_string(parameters, ParameterModeHeader);
 
   return header;
 }
+
+void
+OAuth::parse_query(string query, RequestParams &params) const
+{
+  g_debug("Response body: %s", query.c_str());
+
+  if (query != "")
+    {
+      vector<string> query_params;
+      StringUtil::split(query, '&', query_params);
+
+      for (size_t i = 0; i < query_params.size(); ++i)
+        {
+          vector<string> param_elements;
+          StringUtil::split(query_params[i], '=', param_elements);
+      
+          if (param_elements.size() == 2)
+            {
+              params[param_elements[0]] = param_elements[1];
+            }
+        }
+    }
+}
+

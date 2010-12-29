@@ -7,6 +7,7 @@ pkg_check_modules(CRYPTO REQUIRED libcrypto++)
 pkg_check_modules(SOUP REQUIRED libsoup-2.4)
 pkg_check_modules(DBUS REQUIRED dbus-glib-1)
 pkg_check_modules(KEYRING REQUIRED gnome-keyring-1)
+pkg_check_modules(JASON REQUIRED json-glib-1.0)
 
 link_directories(
     ${GLIB_LIBRARY_DIRS}
@@ -14,6 +15,7 @@ link_directories(
     ${SOUP_LIBRARY_DIRS}
     ${DBUS_LIBRARY_DIRS}
     ${KEYRING_LIBRARY_DIRS}
+    ${JASON_LIBRARY_DIRS}
 )
 
 include_directories(
@@ -22,8 +24,10 @@ include_directories(
     ${SOUP_INCLUDE_DIRS}
     ${DBUS_INCLUDE_DIRS}
     ${KEYRING_INCLUDE_DIRS}
+    ${JASON_INCLUDE_DIRS}
 )
 
 add_definitions(-W -Wall -Wextra -g -O0)
-add_executable(oauth OAuth.cc StringUtil.cc main.cc)
-target_link_libraries(oauth ${GLIB_LIBRARIES} ${CRYPTO_LIBRARIES} ${SOUP_LIBRARIES} ${DBUS_LIBRARIES} ${KEYRING_LIBRARIES})
+add_executable(oauth WebBackendSoup.cc OAuth.cc StringUtil.cc main.cc)
+target_link_libraries(oauth ${GLIB_LIBRARIES} ${CRYPTO_LIBRARIES} ${SOUP_LIBRARIES} ${DBUS_LIBRARIES} ${KEYRING_LIBRARIES} ${JASON_LIBRARIES})
+
