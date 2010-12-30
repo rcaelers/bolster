@@ -204,8 +204,10 @@ int main(int argc, char **argv)
                   "http://127.0.0.1:8888/oauth/access_token/",
                   "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
                   "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
-  
-  web->init("Hello", "World", &result);
+
+  OAuth::RequestParams parameters;
+  parameters["scope"] = "all";
+  web->init("Hello", "World", parameters, &result);
   
   g_main_loop_run(loop);
   g_main_loop_unref(loop);

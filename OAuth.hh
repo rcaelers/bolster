@@ -10,6 +10,7 @@
 class OAuth
 {
 public:
+  typedef std::map<std::string, std::string> RequestParams;
   typedef boost::function<void (bool success, const std::string &) > OAuthResult;
   typedef IWebBackend::WebReplyCallback WebReplyCallback;
   
@@ -21,9 +22,9 @@ public:
         const std::string &success_html,
         const std::string &failure_html);
 
-  void init(const std::string &consumer_key, const std::string &consumer_secret, OAuthResult callback);
-  void init(const std::string &consumer_key, const std::string &consumer_secret, const std::string &token_key, std::string const &token_secret);
-
+  void init(const std::string &consumer_key, const std::string &consumer_secret, const RequestParams &custom_headers, OAuthResult callback);
+  void init(const std::string &consumer_key, const std::string &consumer_secret, const std::string &token_key, std::string const &token_secret, const RequestParams &custom_headers);
+  
   int request(const std::string &http_method,
               const std::string &uri,
               const std::string &body,
@@ -35,7 +36,6 @@ public:
                const WebReplyCallback callback);
   
 private:
-  typedef std::map<std::string, std::string> RequestParams;
   enum ParameterMode { ParameterModeHeader, ParameterModeRequest, ParameterModeSignatureBase };
 
 private:
@@ -60,7 +60,8 @@ private:
 private:  
   IWebBackend *backend;
   OAuthResult oauth_result_callback;
-
+  RequestParams custom_headers;
+  
   std::string temporary_request_uri;
   std::string authorize_uri;
   std::string token_request_uri;

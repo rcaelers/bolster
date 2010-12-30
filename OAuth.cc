@@ -44,23 +44,26 @@ OAuth::OAuth(IWebBackend *backend,
 
 
 void
-OAuth::init(const string &consumer_key, const string &consumer_secret, OAuthResult callback)
+OAuth::init(const string &consumer_key, const string &consumer_secret, const RequestParams &custom_headers, OAuthResult callback)
 {
   this->consumer_key = consumer_key;
   this->consumer_secret = consumer_secret;
   this->oauth_result_callback = callback;
-
+  this->custom_headers = custom_headers;
+  
   request_temporary_credentials();
 }
 
 
 void
-OAuth::init(const string &consumer_key, const string &consumer_secret, const string &token_key, const string &token_secret)
+OAuth::init(const string &consumer_key, const string &consumer_secret, const string &token_key, const string &token_secret,
+            const RequestParams &custom_headers)
 {
   this->consumer_key = consumer_key;
   this->consumer_secret = consumer_secret;
   this->token_key = token_key;
   this->token_secret = token_secret;
+  this->custom_headers = custom_headers;
 }
 
 
@@ -206,7 +209,7 @@ OAuth::parameters_to_string(const RequestParams &parameters, ParameterMode mode)
   for(RequestParams::const_iterator it = parameters.begin(); it != parameters.end(); it++)
     {
       string key = it->first;
-      if (!only_oauth || key.find("oauth_") == 0)
+      if (!only_oauth || key.find("oauth_") == 0 || custom_headers.find(key) != custom_headers.end())
         {
           string param = key + "=" + quotes + escape_uri(it->second) +  quotes;
           sorted.push_back(param);
@@ -258,6 +261,8 @@ OAuth::create_oauth_header(const string &http_method,
                            const string &uri,
                            RequestParams &parameters) const
 {
+  parameters.insert(custom_headers.begin(), custom_headers.end());
+  
   parameters["oauth_consumer_key"] = consumer_key;
   parameters["oauth_signature_method"] = signature_method;
   parameters["oauth_timestamp"] = get_timestamp();
