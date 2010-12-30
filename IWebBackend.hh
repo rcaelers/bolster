@@ -9,8 +9,9 @@ class OAuth;
 class IWebBackend
 {
 public:
-  typedef boost::function<void (int status, const std::string &) > WebReplyCallback;
-  typedef boost::function<void (const std::string &) > WebRequestCallback;
+  typedef boost::function<void (int status, const std::string &response) > WebReplyCallback;
+  typedef boost::function<void (const std::string &method, const std::string &query, const std::string &body,
+                                std::string &response_content_type, std::string &response_body) > WebRequestCallback;
 
 public:
   virtual ~IWebBackend() {}

@@ -197,49 +197,23 @@ WebBackendSoup::server_callback(SoupServer *, SoupMessage *message, const char *
                                 GHashTable *query, SoupClientContext *context,
                                 AsyncServerData *data)
 {
-  string response_query;
   
   (void) path;
   (void) context;
   (void) query;
 
-  g_debug("server_callback %s", path);
+  SoupURI *uri = soup_message_get_uri(message);
+  string response_query = (uri != NULL && uri->query != NULL) ? uri->query : "";
+  string response_body = (message->response_body->length > 0) ? message->response_body->data : "";
 
-  try
-    {
-      if (message->method != SOUP_METHOD_GET)
-        {
-          soup_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED);
-          throw WebBackendException("Callback requies HTTP POST");
-        }
+  string content_type;
+  string reply;
 
-      SoupURI *uri = soup_message_get_uri(message);
-      if (uri == NULL || uri->query == NULL)
-        {
-          soup_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED);
-          throw WebBackendException("No Query in callback");
-        }
-      
-      response_query = uri->query;
+  data->callback(message->method, response_query, response_body, content_type, reply);
 
-      soup_message_set_status(message, SOUP_STATUS_OK);
-      soup_message_set_response(message, "text/plain",
-                                SOUP_MEMORY_STATIC,
-                                "OK\r\n", 4);
-    }
-  catch(WebBackendException &e)
-    {
-      g_debug("server_failed %s", e.what());
-      soup_message_set_response(message, "text/plain",
-                                SOUP_MEMORY_STATIC,
-                                "FAILED\r\n", 4);
-    }
-
-  // FIXME:
-  //soup_server_quit(server);
-  //g_object_unref(server);
-  
-  data->callback(response_query);
+  g_debug("reply %s %s", reply.c_str(), content_type.c_str());
+  soup_message_set_status(message, SOUP_STATUS_OK);
+  soup_message_set_response(message, content_type.c_str(), SOUP_MEMORY_COPY, reply.c_str(), reply.length());
 }
 
 

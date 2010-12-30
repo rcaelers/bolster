@@ -28,11 +28,15 @@ using namespace std;
 OAuth::OAuth(IWebBackend *backend,
              const string &temporary_request_uri,
              const string &authorize_uri,
-             const string &token_request_uri)
+             const string &token_request_uri,
+             const string &success_html,
+             const string &failure_html)
   : backend(backend),
     temporary_request_uri(temporary_request_uri),
     authorize_uri(authorize_uri),
-    token_request_uri(token_request_uri)
+    token_request_uri(token_request_uri),
+    success_html(success_html),
+    failure_html(failure_html)
 {
   oauth_version = "1.0";
   signature_method = "HMAC-SHA1";
@@ -40,7 +44,7 @@ OAuth::OAuth(IWebBackend *backend,
 
 
 void
-OAuth::init(const std::string &consumer_key, const std::string &consumer_secret, OAuthResult callback)
+OAuth::init(const string &consumer_key, const string &consumer_secret, OAuthResult callback)
 {
   this->consumer_key = consumer_key;
   this->consumer_secret = consumer_secret;
@@ -51,7 +55,7 @@ OAuth::init(const std::string &consumer_key, const std::string &consumer_secret,
 
 
 void
-OAuth::init(const std::string &consumer_key, const std::string &consumer_secret, const std::string &token_key, const std::string &token_secret)
+OAuth::init(const string &consumer_key, const string &consumer_secret, const string &token_key, const string &token_secret)
 {
   this->consumer_key = consumer_key;
   this->consumer_secret = consumer_secret;
@@ -61,10 +65,10 @@ OAuth::init(const std::string &consumer_key, const std::string &consumer_secret,
 
 
 int
-OAuth::request(const std::string &http_method,
-               const std::string &uri,
-               const std::string &body,
-               std::string &response_body)
+OAuth::request(const string &http_method,
+               const string &uri,
+               const string &body,
+               string &response_body)
 {
   RequestParams parameters;
   string oauth_header = create_oauth_header(http_method, uri, parameters);
@@ -73,9 +77,9 @@ OAuth::request(const std::string &http_method,
 }
   
 void
-OAuth::request(const std::string &http_method,
-               const std::string &uri,
-               const std::string &body,
+OAuth::request(const string &http_method,
+               const string &uri,
+               const string &body,
                const WebReplyCallback callback)
 {
   RequestParams parameters;
@@ -224,8 +228,8 @@ OAuth::parameters_to_string(const RequestParams &parameters, ParameterMode mode)
 }
 
 
-const std::string
-OAuth::encrypt(const std::string &input, const std::string &key) const
+const string
+OAuth::encrypt(const string &input, const string &key) const
 {
   uint8_t digest[CryptoPP::HMAC<CryptoPP::SHA1>::DIGESTSIZE];
 
@@ -243,7 +247,7 @@ OAuth::encrypt(const std::string &input, const std::string &key) const
   
   base64.Get(encodedValues, size);
   encodedValues[size] = 0;
-  std::string encodedString = (char*)encodedValues;
+  string encodedString = (char*)encodedValues;
 
   return encodedString;
 }
@@ -313,7 +317,7 @@ OAuth::request_temporary_credentials()
     {
       int port;
       string path = "/oauth-verfied";
-      backend->listen(boost::bind(&OAuth::ready_resource_owner_authorization, this, _1),
+      backend->listen(boost::bind(&OAuth::ready_resource_owner_authorization, this, _1, _2, _3, _4, _5),
                       path, port);
 
       stringstream ss;
@@ -340,7 +344,7 @@ OAuth::request_temporary_credentials()
 
 
 void
-OAuth::ready_temporary_credentials(int status, const std::string &response)
+OAuth::ready_temporary_credentials(int status, const string &response)
 {
   try
     {
@@ -415,27 +419,41 @@ OAuth::request_resource_owner_authorization()
 
 
 void
-OAuth::ready_resource_owner_authorization(const std::string &response)
+OAuth::ready_resource_owner_authorization(const string &method, const string &query, const string &body,
+                                          string &response_content_type, string &response_body)
 {
+  (void) body;
+
   try
     {
-      if (response == "")
+      response_content_type = "text/html";
+      response_body = failure_html;
+      (void) body;
+      
+      if (method != "GET")
+        {
+          g_debug("Resource owner authorization only supports GET callback");
+          throw OAuthException();
+        }          
+
+      if (query == "")
         {
           g_debug("Empty response for resource owner authorization");
           throw OAuthException();
         }          
 
       RequestParams response_parameters;
-      parse_query(response, response_parameters);
+      parse_query(query, response_parameters);
 
       string token = response_parameters["oauth_token"];
       string verifier = response_parameters["oauth_verifier"];
 
       if (token == "" || verifier == "")
         {
-          throw OAuthException();
+          throw OAuthException("Token en Verifier must be set");
         }
-      
+
+      response_body = success_html;
       request_token(token, verifier);
     }
   catch(WebBackendException &we)
@@ -475,10 +493,11 @@ OAuth::request_token(const string &token, const string &verifier)
     {
       oauth_result_callback(false, string("OAuth failure") + oe.what());
     }
+  
 }
 
 void
-OAuth::ready_token(int status, const std::string &response)
+OAuth::ready_token(int status, const string &response)
 {
   try
     {

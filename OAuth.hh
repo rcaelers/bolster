@@ -17,7 +17,9 @@ public:
  	OAuth(IWebBackend *backend,
         const std::string &temporary_request_uri,
         const std::string &authorize_uri,
-        const std::string &token_request_uri);
+        const std::string &token_request_uri,
+        const std::string &success_html,
+        const std::string &failure_html);
 
   void init(const std::string &consumer_key, const std::string &consumer_secret, OAuthResult callback);
   void init(const std::string &consumer_key, const std::string &consumer_secret, const std::string &token_key, std::string const &token_secret);
@@ -51,7 +53,8 @@ private:
   void request_resource_owner_authorization();
   void request_token(const std::string &token, const std::string &verifier);
   void ready_temporary_credentials(int status, const std::string &response);
-  void ready_resource_owner_authorization(const std::string &response);
+  void ready_resource_owner_authorization(const std::string &method, const std::string &query, const std::string &body,
+                                          std::string &response_content_type, std::string &response_body);
   void ready_token(int status, const std::string &response);
 
 private:  
@@ -67,6 +70,8 @@ private:
  	std::string token_secret;
  	std::string signature_method;
   std::string oauth_version;
+  std::string success_html;
+  std::string failure_html;
 };
 
 #endif

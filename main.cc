@@ -201,7 +201,9 @@ int main(int argc, char **argv)
   web = new OAuth(backend,
                   "http://127.0.0.1:8888/oauth/request_token/",
                   "http://127.0.0.1:8888/oauth/authorize/",
-                  "http://127.0.0.1:8888/oauth/access_token/");
+                  "http://127.0.0.1:8888/oauth/access_token/",
+                  "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
+                  "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
   
   web->init("Hello", "World", &result);
   

@@ -22,6 +22,8 @@
 ** DONE [#B] Fix memory leaks.
 ** TODO [#B] Add stop listen.
 ** TODO [#B] Refactor Soup -> C++ callbacks
+** DONE [#B] Add Content type to API
+** DONE [#B] Allow custom body return in server
 ** TODO [#D] Allow listening for multiple paths
 
 * Couch
