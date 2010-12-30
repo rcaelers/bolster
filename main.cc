@@ -182,6 +182,10 @@ static OAuth *web = NULL;
 void result(int status, string msg)
 {
   cout << status << " " << msg << endl;
+
+  string response;
+  cout << web->request("GET", "http://localhost:8888/oauth/photo/", "", response) << endl;
+  cout << response << endl;
 }
 
 int main(int argc, char **argv)

@@ -60,6 +60,30 @@ OAuth::init(const std::string &consumer_key, const std::string &consumer_secret,
 }
 
 
+int
+OAuth::request(const std::string &http_method,
+               const std::string &uri,
+               const std::string &body,
+               std::string &response_body)
+{
+  RequestParams parameters;
+  string oauth_header = create_oauth_header(http_method, uri, parameters);
+
+  return backend->request(http_method, uri, body, oauth_header, response_body);
+}
+  
+void
+OAuth::request(const std::string &http_method,
+               const std::string &uri,
+               const std::string &body,
+               const WebReplyCallback callback)
+{
+  RequestParams parameters;
+  string oauth_header = create_oauth_header(http_method, uri, parameters);
+
+  backend->request(http_method, uri, body, oauth_header, callback);
+}
+  
 const string
 OAuth::get_timestamp() const
 {

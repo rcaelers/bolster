@@ -11,7 +11,7 @@
 
 ** DONE [#C] Make token request asynchronous
 ** DONE [#A] Remove hardcoded URIs
-** TODO [#A] Add support for OAuth http requests
+** DONE [#A] Add support for OAuth http requests
 ** TODO [#B] Add custom OAuth headers (e.g. Realm)
 
 * WebBackend

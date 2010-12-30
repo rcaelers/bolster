@@ -5,12 +5,13 @@
 #include <map>
 #include <boost/function.hpp>
 
-class IWebBackend;
+#include "IWebBackend.hh"
 
 class OAuth
 {
 public:
   typedef boost::function<void (bool success, const std::string &) > OAuthResult;
+  typedef IWebBackend::WebReplyCallback WebReplyCallback;
   
 public:
  	OAuth(IWebBackend *backend,
@@ -20,6 +21,16 @@ public:
 
   void init(const std::string &consumer_key, const std::string &consumer_secret, OAuthResult callback);
   void init(const std::string &consumer_key, const std::string &consumer_secret, const std::string &token_key, std::string const &token_secret);
+
+  int request(const std::string &http_method,
+              const std::string &uri,
+              const std::string &body,
+              std::string &response_body);
+  
+  void request(const std::string &http_method,
+               const std::string &uri,
+               const std::string &body,
+               const WebReplyCallback callback);
   
 private:
   typedef std::map<std::string, std::string> RequestParams;
