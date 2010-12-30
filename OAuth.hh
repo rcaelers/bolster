@@ -13,7 +13,10 @@ public:
   typedef boost::function<void (bool success, const std::string &) > OAuthResult;
   
 public:
- 	OAuth(IWebBackend *backend);
+ 	OAuth(IWebBackend *backend,
+        const std::string &temporary_request_uri,
+        const std::string &authorize_uri,
+        const std::string &token_request_uri);
 
   void init(const std::string &consumer_key, const std::string &consumer_secret, OAuthResult callback);
   void init(const std::string &consumer_key, const std::string &consumer_secret, const std::string &token_key, std::string const &token_secret);
@@ -43,7 +46,10 @@ private:
 private:  
   IWebBackend *backend;
   OAuthResult oauth_result_callback;
-  
+
+  std::string temporary_request_uri;
+  std::string authorize_uri;
+  std::string token_request_uri;
  	std::string consumer_key;
  	std::string consumer_secret;
  	std::string token_key;

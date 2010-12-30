@@ -177,6 +177,8 @@ using namespace std;
 //     }
 // }
 
+static OAuth *web = NULL;
+
 void result(int status, string msg)
 {
   cout << status << " " << msg << endl;
@@ -192,10 +194,13 @@ int main(int argc, char **argv)
   GMainLoop *loop = g_main_loop_new(NULL, TRUE);
 
   IWebBackend *backend = new WebBackendSoup();
-  OAuth web(backend);
-
-  web.init("Hello", "World", &result);
- 
+  web = new OAuth(backend,
+                  "http://127.0.0.1:8888/oauth/request_token/",
+                  "http://127.0.0.1:8888/oauth/authorize/",
+                  "http://127.0.0.1:8888/oauth/access_token/");
+  
+  web->init("Hello", "World", &result);
+  
   g_main_loop_run(loop);
   g_main_loop_unref(loop);
 }

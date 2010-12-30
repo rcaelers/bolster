@@ -25,8 +25,14 @@
 
 using namespace std;
 
-OAuth::OAuth(IWebBackend *backend)
-  : backend(backend)
+OAuth::OAuth(IWebBackend *backend,
+             const string &temporary_request_uri,
+             const string &authorize_uri,
+             const string &token_request_uri)
+  : backend(backend),
+    temporary_request_uri(temporary_request_uri),
+    authorize_uri(authorize_uri),
+    token_request_uri(token_request_uri)
 {
   oauth_version = "1.0";
   signature_method = "HMAC-SHA1";
@@ -244,6 +250,9 @@ OAuth::create_oauth_header(const string &http_method,
                                    escape_uri(normalized_parameters)
                                    );
 
+  g_debug("BASE %s", signature_base_string.c_str());
+  g_debug("KEY %s", key.c_str());
+  
   string signature = encrypt(signature_base_string, key);
 
   parameters["oauth_signature"] = signature;
@@ -290,11 +299,9 @@ OAuth::request_temporary_credentials()
       parameters["oauth_callback"] = ss.str();
 
       string http_method = "POST";
-      string uri = "http://127.0.0.1:8888/oauth/request_token/";
-  
-      string oauth_header = create_oauth_header(http_method, uri, parameters);
+      string oauth_header = create_oauth_header(http_method, temporary_request_uri, parameters);
 
-      backend->request(http_method, uri, "", oauth_header,
+      backend->request(http_method, temporary_request_uri, "", oauth_header,
                        boost::bind(&OAuth::ready_temporary_credentials, this, _1, _2));
     }
   catch(OAuthException &oe)
@@ -358,8 +365,8 @@ OAuth::request_resource_owner_authorization()
           throw OAuthException("Cannot find xdg-open");
         }
       
-      string command = ( string(program) +
-                         " http://127.0.0.1:8888/oauth/authorize/?oauth_token="
+      string command = ( string(program) + " " +
+                         authorize_uri + "?oauth_token="
                          + escape_uri(token_key)
                          );
   
@@ -431,11 +438,9 @@ OAuth::request_token(const string &token, const string &verifier)
       parameters["oauth_verifier"] = verifier;
 
       string http_method = "POST";
-      string uri = "http://127.0.0.1:8888/oauth/access_token/";
-  
-      string oauth_header = create_oauth_header(http_method, uri, parameters);
+      string oauth_header = create_oauth_header(http_method, token_request_uri, parameters);
 
-      backend->request(http_method, uri, "", oauth_header,
+      backend->request(http_method, token_request_uri, "", oauth_header,
                        boost::bind(&OAuth::ready_token, this, _1, _2));
     }
   catch(WebBackendException &we)
