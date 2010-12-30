@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <string>
+#include <iostream>
 
 #ifdef __cplusplus
 extern "C"
@@ -176,6 +177,11 @@ using namespace std;
 //     }
 // }
 
+void result(int status, string msg)
+{
+  cout << status << " " << msg << endl;
+}
+
 int main(int argc, char **argv)
 {
   (void) argc;
@@ -188,7 +194,7 @@ int main(int argc, char **argv)
   IWebBackend *backend = new WebBackendSoup();
   OAuth web(backend);
 
-  web.init("Hello", "World");
+  web.init("Hello", "World", &result);
  
   g_main_loop_run(loop);
   g_main_loop_unref(loop);

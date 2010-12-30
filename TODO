@@ -1,10 +1,31 @@
 -*- org -*-
 
-* FIX [#B] Add const
-* TODO [#B] Add Exception handling
-* TODO [#B] Add asynchronous request
-* TODO [#C] Make token request asynchronous
-* TODO [#A] Check for memory leaks (valgrind)
-* TODO [#C] Remove libcrypto++
-* TODO [#B] Delegate escaping to IWebBackend
+* General
+
+** DONE [#B] Add const
+** DONE [#B] Add Exception handling
+** TODO [#C] Remove libcrypto++
+** TODO [#A] Check for memory leaks (valgrind)
+
+* OAuth
+
+** DONE [#C] Make token request asynchronous
+** TODO [#A] Remove hardcoded URIs
+** TODO [#A] Add support for OAuth http requests
+** TODO [#B] Add custom OAuth headers (e.g. Realm)
+
+* WebBackend
+
+** DONE [#B] Add asynchronous request
+** TODO [#D] Proxy support
+** TODO [#B] Delegate escaping to IWebBackend
+** FIX  [#B] Fix memory leaks.
+** TODO [#B] Add stop listen.
+** TODO [#B] Refactor Soup -> C++ callbacks
+** TODO [#D] Allow listening for multiple paths
+
+* Couch
+
+** TODO [#B] Add support for desktop CouchDB
+** TODO [#C] Add support for Ubuntu One CouchDB
 

@@ -1,9 +1,12 @@
+#include "OAuth.hh"
+
 #include <iostream>
 #include <sstream>
 #include <algorithm>
 #include <string.h>
 #include <list>
 #include <stdint.h>
+#include "boost/bind.hpp"
 
 #include <glib.h>
 
@@ -14,11 +17,11 @@
 
 #include <libsoup/soup.h>
 
-#include "OAuth.hh"
 #include "IWebBackend.hh"
+#include "OAuthException.hh"
+#include "WebBackendException.hh"
 #include "StringUtil.hh"
 
-#include "boost/bind.hpp"
 
 using namespace std;
 
@@ -27,23 +30,22 @@ OAuth::OAuth(IWebBackend *backend)
 {
   oauth_version = "1.0";
   signature_method = "HMAC-SHA1";
-  callback = "oob";
 }
 
 
 void
-OAuth::init(std::string consumer_key, std::string consumer_secret)
+OAuth::init(const std::string &consumer_key, const std::string &consumer_secret, OAuthResult callback)
 {
   this->consumer_key = consumer_key;
   this->consumer_secret = consumer_secret;
+  this->oauth_result_callback = callback;
 
   request_temporary_credentials();
-  
 }
 
 
 void
-OAuth::init(std::string consumer_key, std::string consumer_secret, std::string token_key, std::string token_secret)
+OAuth::init(const std::string &consumer_key, const std::string &consumer_secret, const std::string &token_key, const std::string &token_secret)
 {
   this->consumer_key = consumer_key;
   this->consumer_secret = consumer_secret;
@@ -52,109 +54,7 @@ OAuth::init(std::string consumer_key, std::string consumer_secret, std::string t
 }
 
 
-void
-OAuth::set_callback(std::string callback)
-{
-  this->callback = callback;
-}
-
-
-void
-OAuth::set_verifier(std::string verifier)
-{
-  this->verifier = verifier;
-}
-
-
-void
-OAuth::request_temporary_credentials()
-{
-  RequestParams parameters;
-
-  IWebBackend::ListenCallback cb = boost::bind(&OAuth::request_token, this, _1);
-
-  int port;
-  string path = "/oauth-verfied";
-  backend->listen(cb, path, port);
-
-  stringstream ss;
-  ss << "http://127.0.0.1:" << port << path;
-  
-  parameters["oauth_callback"] = ss.str();
-
-  string http_method = "POST";
-  string uri = "http://127.0.0.1:8888/oauth/request_token/";
-  
-  string oauth_header = create_headers(http_method, uri, parameters);
-
-  string response = backend->request(http_method, uri, "", oauth_header);
-
-  RequestParams response_parameters;
-  parse_query(response, response_parameters);
-
-  token_key = response_parameters["oauth_token"];
-  token_secret = response_parameters["oauth_token_secret"];
-
-  if (response_parameters["oauth_callback_confirmed"] != "true")
-    {
-      g_debug("oauth_callback_confirmed error");
-    }
-
-  request_resource_owner_authorization();
-}
-
-
-void
-OAuth::request_resource_owner_authorization()
-{
-  gchar *program = g_find_program_in_path("xdg-open");
-  if (program != NULL)
-    {
-      string command = ( string(program) +
-                         " http://127.0.0.1:8888/oauth/authorize/?oauth_token="
-                         + escape_uri(token_key)
-                         );
-  
-      
-      gint exit_code;
-      GError *error = NULL;
-      if (!g_spawn_command_line_sync(command.c_str(), NULL, NULL, &exit_code, &error) )
-        {
-          g_error_free(error);
-        }
-    }
-}
-
-
-void
-OAuth::request_token(const string &query)
-{
-  g_debug("request_token %s", query.c_str());
-}
-
-string
-OAuth::get_request_header(const std::string &http_method, const std::string &uri) const
-{
-  RequestParams parameters;
-
-  return create_headers(http_method, uri, parameters);
-}
-
-
-string
-OAuth::escape_uri(const string &uri) const
-{
-  return g_uri_escape_string(uri.c_str(), NULL, TRUE);
-}
-
-
-string
-OAuth::unescape_uri(const string &uri) const
-{
-  return g_uri_unescape_string(uri.c_str(), NULL);
-}
-
-string
+const string
 OAuth::get_timestamp() const
 {
   time_t now = time (NULL);
@@ -164,7 +64,8 @@ OAuth::get_timestamp() const
   return ss.str();
 }
 
-string
+
+const string
 OAuth::get_nonce() const
 {
   static bool random_seeded = 1;
@@ -186,6 +87,21 @@ OAuth::get_nonce() const
 
   return nonce;
 }
+
+
+const string
+OAuth::escape_uri(const string &uri) const
+{
+  return g_uri_escape_string(uri.c_str(), NULL, TRUE);
+}
+
+
+const string
+OAuth::unescape_uri(const string &uri) const
+{
+  return g_uri_unescape_string(uri.c_str(), NULL);
+}
+
 
 const string
 OAuth::normalize_uri(const string &uri, RequestParams &parameters) const
@@ -278,7 +194,7 @@ OAuth::parameters_to_string(const RequestParams &parameters, ParameterMode mode)
 }
 
 
-std::string
+const std::string
 OAuth::encrypt(const std::string &input, const std::string &key) const
 {
   uint8_t digest[CryptoPP::HMAC<CryptoPP::SHA1>::DIGESTSIZE];
@@ -303,18 +219,15 @@ OAuth::encrypt(const std::string &input, const std::string &key) const
 }
 
 
-string
-OAuth::create_headers(const string &http_method,
-                      const string &uri,
-                      RequestParams &parameters) const
+const string
+OAuth::create_oauth_header(const string &http_method,
+                           const string &uri,
+                           RequestParams &parameters) const
 {
-  string timestamp = get_timestamp();
-  string nonce = get_nonce();
-
   parameters["oauth_consumer_key"] = consumer_key;
   parameters["oauth_signature_method"] = signature_method;
-  parameters["oauth_timestamp"] = timestamp;
-  parameters["oauth_nonce"] = nonce;
+  parameters["oauth_timestamp"] = get_timestamp();
+  parameters["oauth_nonce"] = get_nonce();
   parameters["oauth_version"] = oauth_version;
 
   if (token_key != "")
@@ -322,37 +235,26 @@ OAuth::create_headers(const string &http_method,
       parameters["oauth_token"] = token_key;
     }
 
-  string key = consumer_secret + "&";
-  if (token_secret != "")
-    {
-      key += token_secret;
-    }
-  
+  string key = consumer_secret + "&" + token_secret;
   string normalized_uri = normalize_uri(uri, parameters);
   string normalized_parameters = parameters_to_string(parameters, ParameterModeSignatureBase);
- 
+
   string signature_base_string = ( http_method + "&" +
                                    escape_uri(normalized_uri) + "&" +
                                    escape_uri(normalized_parameters)
                                    );
 
-  cout << "BASE " << signature_base_string << endl;
-  cout << "KEY " << key << endl;
-  
   string signature = encrypt(signature_base_string, key);
 
   parameters["oauth_signature"] = signature;
   
-  string header = "OAuth " + parameters_to_string(parameters, ParameterModeHeader);
-
-  return header;
+  return  "OAuth " + parameters_to_string(parameters, ParameterModeHeader);
 }
 
-void
-OAuth::parse_query(string query, RequestParams &params) const
-{
-  g_debug("Response body: %s", query.c_str());
 
+void
+OAuth::parse_query(const string &query, RequestParams &params) const
+{
   if (query != "")
     {
       vector<string> query_params;
@@ -371,3 +273,215 @@ OAuth::parse_query(string query, RequestParams &params) const
     }
 }
 
+void
+OAuth::request_temporary_credentials()
+{
+  try
+    {
+      int port;
+      string path = "/oauth-verfied";
+      backend->listen(boost::bind(&OAuth::ready_resource_owner_authorization, this, _1),
+                      path, port);
+
+      stringstream ss;
+      ss << "http://127.0.0.1:" << port << path;
+  
+      RequestParams parameters;
+      parameters["oauth_callback"] = ss.str();
+
+      string http_method = "POST";
+      string uri = "http://127.0.0.1:8888/oauth/request_token/";
+  
+      string oauth_header = create_oauth_header(http_method, uri, parameters);
+
+      backend->request(http_method, uri, "", oauth_header,
+                       boost::bind(&OAuth::ready_temporary_credentials, this, _1, _2));
+    }
+  catch(OAuthException &oe)
+    {
+      oauth_result_callback(false, string("OAuth failure") + oe.what());
+    }
+  catch(WebBackendException &we)
+    {
+      oauth_result_callback(false, string("OAuth failure") + we.what());
+    }
+}
+
+
+void
+OAuth::ready_temporary_credentials(int status, const std::string &response)
+{
+  try
+    {
+      if (status != 200)
+        {
+          g_debug("Invalid response for temporary credentials %d", status);
+          throw OAuthException("Invalid response for temporary credentials");
+        }
+      if (response == "")
+        {
+          g_debug("Empty response for temporary credentials");
+          throw OAuthException("Empty response for temporary credentials");
+        }          
+
+      RequestParams response_parameters;
+      parse_query(response, response_parameters);
+
+      if (response_parameters["oauth_callback_confirmed"] != "true")
+        {
+          g_debug("Callback not confirmed");
+          throw OAuthException("Callback not confirmed");
+        }
+      
+      string key = response_parameters["oauth_token"];
+      string secret = response_parameters["oauth_token_secret"];
+
+      token_key = key;
+      token_secret = secret;
+
+      request_resource_owner_authorization();
+    }
+  catch(OAuthException &oe)
+    {
+      oauth_result_callback(false, string("OAuth failure ") + oe.what());
+    }
+}
+
+void
+OAuth::request_resource_owner_authorization()
+{
+  try
+    {
+      gchar *program = g_find_program_in_path("xdg-open");
+      if (program == NULL)
+        {
+          throw OAuthException("Cannot find xdg-open");
+        }
+      
+      string command = ( string(program) +
+                         " http://127.0.0.1:8888/oauth/authorize/?oauth_token="
+                         + escape_uri(token_key)
+                         );
+  
+      gint exit_code;
+      GError *error = NULL;
+      if (!g_spawn_command_line_sync(command.c_str(), NULL, NULL, &exit_code, &error))
+        {
+          g_error_free(error);
+          throw OAuthException("xdg-open failed");
+        }
+
+      if (WEXITSTATUS(exit_code) != 0)
+        {
+          throw OAuthException("xdg-open returned != 0");
+        }
+    }
+  catch(OAuthException &oe)
+    {
+      oauth_result_callback(false, string("OAuth failure") + oe.what());
+    }
+}
+
+
+void
+OAuth::ready_resource_owner_authorization(const std::string &response)
+{
+  try
+    {
+      if (response == "")
+        {
+          g_debug("Empty response for resource owner authorization");
+          throw OAuthException();
+        }          
+
+      RequestParams response_parameters;
+      parse_query(response, response_parameters);
+
+      string token = response_parameters["oauth_token"];
+      string verifier = response_parameters["oauth_verifier"];
+
+      if (token == "" || verifier == "")
+        {
+          throw OAuthException();
+        }
+      
+      request_token(token, verifier);
+    }
+  catch(WebBackendException &we)
+    {
+      oauth_result_callback(false, string("OAuth failure") + we.what());
+    }
+  catch(OAuthException &oe)
+    {
+      oauth_result_callback(false, string("OAuth failure") + oe.what());
+    }
+}
+
+void
+OAuth::request_token(const string &token, const string &verifier)
+{
+  try
+    {
+      if (token != token_key)
+        {
+          throw OAuthException();
+        }
+      
+      RequestParams parameters;
+      parameters["oauth_verifier"] = verifier;
+
+      string http_method = "POST";
+      string uri = "http://127.0.0.1:8888/oauth/access_token/";
+  
+      string oauth_header = create_oauth_header(http_method, uri, parameters);
+
+      backend->request(http_method, uri, "", oauth_header,
+                       boost::bind(&OAuth::ready_token, this, _1, _2));
+    }
+  catch(WebBackendException &we)
+    {
+      oauth_result_callback(false, string("OAuth failure") + we.what());
+    }
+  catch(OAuthException &oe)
+    {
+      oauth_result_callback(false, string("OAuth failure") + oe.what());
+    }
+}
+
+void
+OAuth::ready_token(int status, const std::string &response)
+{
+  try
+    {
+      if (status != 200)
+        {
+          g_debug("Invalid response for temporary credentials %d", status);
+          throw OAuthException();
+        }
+      if (response == "")
+        {
+          g_debug("Empty response for temporary credentials");
+          throw OAuthException();
+        }          
+
+      RequestParams response_parameters;
+      parse_query(response, response_parameters);
+
+      string key = response_parameters["oauth_token"];
+      string secret = response_parameters["oauth_token_secret"];
+
+      if (key == "" || secret == "")
+        {
+          throw OAuthException();
+        }
+
+      token_key = key;
+      token_secret = secret;
+
+      oauth_result_callback(true, "OAuth successful");
+    }
+  catch(OAuthException &oe)
+    {
+      oauth_result_callback(false, string("OAuth failure") + oe.what());
+    }
+}
