@@ -19,7 +19,7 @@
 ** DONE [#B] Add asynchronous request
 ** TODO [#D] Proxy support
 ** TODO [#B] Delegate escaping to IWebBackend
-** FIX  [#B] Fix memory leaks.
+** DONE [#B] Fix memory leaks.
 ** TODO [#B] Add stop listen.
 ** TODO [#B] Refactor Soup -> C++ callbacks
 ** TODO [#D] Allow listening for multiple paths

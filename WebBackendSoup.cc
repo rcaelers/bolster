@@ -60,7 +60,6 @@ WebBackendSoup::request(const string &http_method, const string &uri, const stri
 void
 WebBackendSoup::request(const string &http_method, const string &uri, const string &body, const string &oauth_header, WebReplyCallback callback)
 {
-  // FIXME: leak
   AsyncRequestData *data = new AsyncRequestData(this, callback);
 
   if (async_session == NULL)
@@ -76,7 +75,6 @@ WebBackendSoup::request(const string &http_method, const string &uri, const stri
 void
 WebBackendSoup::listen(WebRequestCallback callback, const string &path, int &port)
 {
-  // FIXME: leak
   AsyncServerData *data = new AsyncServerData(this, callback);
 
   if (server != NULL)
@@ -191,6 +189,7 @@ WebBackendSoup::AsyncServerData::cb(SoupServer *server, SoupMessage *message, co
 {
   AsyncServerData *d = (AsyncServerData *)data;
   d->backend->server_callback(server, message, path, query, context, d);
+  delete d;
 }
 
 void
@@ -249,6 +248,7 @@ WebBackendSoup::AsyncRequestData::cb(SoupSession *session, SoupMessage *message,
 {
   AsyncRequestData *d = (AsyncRequestData *)user_data;
   d->backend->client_callback(session, message, d);
+  delete d;
 }
 
 void
