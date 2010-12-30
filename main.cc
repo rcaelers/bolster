@@ -205,10 +205,21 @@ int main(int argc, char **argv)
                   "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
                   "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
 
-  OAuth::RequestParams parameters;
-  parameters["scope"] = "all";
-  web->init("Hello", "World", parameters, &result);
+  // Ubuntu One:
+  // web = new OAuth(backend,
+  //                 "https://one.ubuntu.com/oauth/request/",
+  //                 "https://one.ubuntu.com/oauth/authorize/",
+  //                 "https://one.ubuntu.com/oauth/access/", 
+  //                 "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
+  //                 "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
   
+  
+  OAuth::RequestParams parameters;
+  web->init("Hello", "World", parameters, &result);
+  // Ubuntu One
+  web->init("anyone", "anyone", parameters, &result);
+
+
   g_main_loop_run(loop);
   g_main_loop_unref(loop);
 }

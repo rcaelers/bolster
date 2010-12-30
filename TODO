@@ -13,6 +13,7 @@
 ** DONE [#A] Remove hardcoded URIs
 ** DONE [#A] Add support for OAuth http requests
 ** DONE [#B] Add custom OAuth headers (e.g. Realm)
+** DONE [#B] Test with Ubuntu One
 
 * WebBackend
 
