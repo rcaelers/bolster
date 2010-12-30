@@ -36,6 +36,8 @@ private:
   SoupSession *session;
   SoupURI *proxy;
   SoupServer *server;
+
+  ListenCallback listen_cb;
 };
 
 #endif

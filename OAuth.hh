@@ -37,6 +37,7 @@ private:
 
   void request_temporary_credentials();
   void request_resource_owner_authorization();
+  void request_token(const std::string &query);
   
   std::string create_headers(const std::string &http_method, const std::string &uri, RequestParams &parameters) const;
   const std::string normalize_uri(const std::string &uri, RequestParams &parameters) const;

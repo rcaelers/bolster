@@ -10,7 +10,7 @@ class IWebBackend
 {
 public:
   typedef boost::function<void (std::string) > RequestCallback;  
-  typedef boost::function<void (std::string) > ListenCallback;  
+  typedef boost::function<void (const std::string &) > ListenCallback;
 
 public:
   virtual ~IWebBackend() {}

@@ -18,6 +18,8 @@
 #include "IWebBackend.hh"
 #include "StringUtil.hh"
 
+#include "boost/bind.hpp"
+
 using namespace std;
 
 OAuth::OAuth(IWebBackend *backend)
@@ -69,7 +71,7 @@ OAuth::request_temporary_credentials()
 {
   RequestParams parameters;
 
-  IWebBackend::ListenCallback cb;
+  IWebBackend::ListenCallback cb = boost::bind(&OAuth::request_token, this, _1);
 
   int port;
   string path = "/oauth-verfied";
@@ -123,6 +125,12 @@ OAuth::request_resource_owner_authorization()
     }
 }
 
+
+void
+OAuth::request_token(const string &query)
+{
+  g_debug("request_token %s", query.c_str());
+}
 
 string
 OAuth::get_request_header(const std::string &http_method, const std::string &uri) const

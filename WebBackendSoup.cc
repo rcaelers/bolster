@@ -9,6 +9,7 @@
 
 
 #include "WebBackendSoup.hh"
+#include "WebBackendException.hh"
 #include "OAuth.hh"
 #include "StringUtil.hh"
 
@@ -139,8 +140,8 @@ WebBackendSoup::listen(ListenCallback callback, string path, int &port)
       g_object_unref(server);
       server = NULL;
     }
-  
-  (void) callback;
+
+  listen_cb = callback;  
   
   SoupAddress *addr = soup_address_new("127.0.0.1", SOUP_ADDRESS_ANY_PORT);
   soup_address_resolve_sync(addr, NULL);
@@ -181,34 +182,46 @@ WebBackendSoup::server_callback(SoupServer *server, SoupMessage *message, const 
 void
 WebBackendSoup::server_callback(SoupServer *, SoupMessage *message, const char *path, GHashTable *query, SoupClientContext *context)
 {
+  string response_query;
+  
   (void) path;
   (void) context;
+  (void) query;
 
   g_debug("server_callback %s", path);
-  
-  if (message->method != SOUP_METHOD_GET)
+
+  try
     {
-      soup_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED);
-      return;
+      if (message->method != SOUP_METHOD_GET)
+        {
+          soup_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED);
+          throw WebBackendException("Callback requies HTTP POST");
+        }
+
+      SoupURI *uri = soup_message_get_uri(message);
+      if (uri == NULL || uri->query == NULL)
+        {
+          soup_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED);
+          throw WebBackendException("No Query in callback");
+        }
+      
+      response_query = uri->query;
+
+      soup_message_set_status(message, SOUP_STATUS_OK);
+      soup_message_set_response(message, "text/plain",
+                                SOUP_MEMORY_STATIC,
+                                "OK\r\n", 4);
     }
-
-  char *token = NULL;
-  char *verifier = NULL;
-
-	if (query != NULL)
+  catch(WebBackendException &e)
     {
-      token = (char *)g_hash_table_lookup(query, "oauth_token");
-      verifier = (char *)g_hash_table_lookup(query, "oauth_verifier");
+      g_debug("server_failed %s", e.what());
+      soup_message_set_response(message, "text/plain",
+                                SOUP_MEMORY_STATIC,
+                                "FAILED\r\n", 4);
     }
-
-  g_debug("%s %s", token, verifier);
-  
-	soup_message_set_response(message, "text/plain",
-				   SOUP_MEMORY_STATIC,
-				   "OK\r\n", 4);
-	soup_message_set_status (message, SOUP_STATUS_OK);
 
   g_object_unref(server);
+  listen_cb(response_query);
 }
 
 
