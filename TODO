@@ -4,7 +4,7 @@
 
 ** DONE [#B] Add const
 ** DONE [#B] Add Exception handling
-** TODO [#C] Remove libcrypto++
+** DONE [#C] Remove libcrypto++
 ** TODO [#A] Check for memory leaks (valgrind)
 
 * OAuth

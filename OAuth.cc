@@ -22,28 +22,27 @@
 
 #include "OAuth.hh"
 
-#include <iostream>
 #include <sstream>
-#include <algorithm>
 #include <string.h>
 #include <list>
-#include <stdint.h>
 #include "boost/bind.hpp"
 
 #include <glib.h>
 
+#ifdef HAVE_CRYPTOPP  
 #include <crypto++/cryptlib.h>
 #include <crypto++/sha.h>
 #include <crypto++/hmac.h>
 #include <crypto++/base64.h>
+#endif
 
+#include <gcrypt.h>
 #include <libsoup/soup.h>
 
 #include "IWebBackend.hh"
 #include "OAuthException.hh"
 #include "WebBackendException.hh"
 #include "StringUtil.hh"
-
 
 using namespace std;
 
@@ -256,6 +255,7 @@ OAuth::parameters_to_string(const RequestParams &parameters, ParameterMode mode)
 const string
 OAuth::encrypt(const string &input, const string &key) const
 {
+#ifdef HAVE_CRYPTOPP  
   uint8_t digest[CryptoPP::HMAC<CryptoPP::SHA1>::DIGESTSIZE];
 
   CryptoPP::HMAC<CryptoPP::SHA1> hmac((uint8_t*)key.c_str(), key.size());
@@ -268,13 +268,51 @@ OAuth::encrypt(const string &input, const string &key) const
   base64.MessageSeriesEnd();
   
   unsigned int size = (sizeof(digest) + 2 - ((sizeof(digest) + 2) % 3)) * 4 / 3;
-  uint8_t* encodedValues = new uint8_t[size + 1];
+  uint8_t* encoded_values = new uint8_t[size + 1];
   
-  base64.Get(encodedValues, size);
-  encodedValues[size] = 0;
-  string encodedString = (char*)encodedValues;
+  base64.Get(encoded_values, size);
+  encoded_values[size] = 0;
+  return string((char *)encoded_values);
 
-  return encodedString;
+#else
+
+  string ret;
+  gcry_md_hd_t hd = NULL;
+  gcry_error_t err = 0;
+  try
+    {
+      err = gcry_md_open(&hd, GCRY_MD_SHA1, GCRY_MD_FLAG_SECURE | GCRY_MD_FLAG_HMAC);
+      if (err)
+        {
+          throw OAuthException();
+        }
+
+      err = gcry_md_setkey(hd, key.c_str(), key.length());
+      if (err)
+        {
+          throw OAuthException();
+        }
+
+      gcry_md_write(hd, input.c_str(), input.length());
+
+      size_t digest_length = gcry_md_get_algo_dlen(GCRY_MD_SHA1);
+      const guchar *digest = (const guchar *)gcry_md_read(hd, 0);
+      const gchar *digest64 = g_base64_encode(digest, digest_length);
+ 
+      ret = digest64;
+    }
+  catch (OAuthException &e)
+    {
+      g_printerr("Failed to encrypt: %s", gcry_strerror(err));
+    }
+
+  if (hd != NULL)
+    {
+      gcry_md_close(hd);
+    }
+
+  return ret;
+#endif  
 }
 
 
