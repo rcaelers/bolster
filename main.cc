@@ -13,8 +13,6 @@ extern "C"
 {
 #endif  /* __cplusplus */
 
-#include <dbus/dbus-glib.h>
-
 #include <libsoup/soup-logger.h>
 #include <libsoup/soup-session-sync.h>
 #include <libsoup/soup-message.h>
