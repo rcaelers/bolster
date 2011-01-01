@@ -357,11 +357,11 @@ OAuth::request_temporary_credentials()
     }
   catch(OAuthException &oe)
     {
-      oauth_result_callback(false, string("OAuth failure") + oe.what());
+      oauth_result_callback(false, string("OAuth failure") + oe.details());
     }
   catch(WebBackendException &we)
     {
-      oauth_result_callback(false, string("OAuth failure") + we.what());
+      oauth_result_callback(false, string("OAuth failure") + we.details());
     }
 }
 
@@ -401,7 +401,7 @@ OAuth::ready_temporary_credentials(int status, const string &response)
     }
   catch(OAuthException &oe)
     {
-      oauth_result_callback(false, string("OAuth failure ") + oe.what());
+      oauth_result_callback(false, string("OAuth failure ") + oe.details());
     }
 }
 
@@ -436,7 +436,7 @@ OAuth::request_resource_owner_authorization()
     }
   catch(OAuthException &oe)
     {
-      oauth_result_callback(false, string("OAuth failure") + oe.what());
+      oauth_result_callback(false, string("OAuth failure") + oe.details());
     }
 }
 
@@ -481,11 +481,11 @@ OAuth::ready_resource_owner_authorization(const string &method, const string &qu
     }
   catch(WebBackendException &we)
     {
-      oauth_result_callback(false, string("OAuth failure") + we.what());
+      oauth_result_callback(false, string("OAuth failure") + we.details());
     }
   catch(OAuthException &oe)
     {
-      oauth_result_callback(false, string("OAuth failure") + oe.what());
+      oauth_result_callback(false, string("OAuth failure") + oe.details());
     }
 }
 
@@ -510,11 +510,11 @@ OAuth::request_token(const string &token, const string &verifier)
     }
   catch(WebBackendException &we)
     {
-      oauth_result_callback(false, string("OAuth failure") + we.what());
+      oauth_result_callback(false, string("OAuth failure") + we.details());
     }
   catch(OAuthException &oe)
     {
-      oauth_result_callback(false, string("OAuth failure") + oe.what());
+      oauth_result_callback(false, string("OAuth failure") + oe.details());
     }
   
 }
@@ -553,6 +553,6 @@ OAuth::ready_token(int status, const string &response)
     }
   catch(OAuthException &oe)
     {
-      oauth_result_callback(false, string("OAuth failure") + oe.what());
+      oauth_result_callback(false, string("OAuth failure") + oe.details());
     }
 }
