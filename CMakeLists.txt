@@ -28,3 +28,8 @@ add_definitions(-W -Wall -Wextra -g -O0)
 add_executable(oauth WebBackendSoup.cc OAuth.cc StringUtil.cc main.cc)
 target_link_libraries(oauth ${GLIB_LIBRARIES} ${CRYPTO_LIBRARIES} ${SOUP_LIBRARIES} ${KEYRING_LIBRARIES} ${JASON_LIBRARIES})
 
+add_definitions(-DHAVE_CONFIG_H=1)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
+
+# for including config.h
+include_directories(${CMAKE_BINARY_DIR})
