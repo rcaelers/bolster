@@ -1,5 +1,6 @@
+// Exception.hh --- Base exception
 //
-// Copyright (C) 2010, 2011 Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2007, 2011 Rob Caelers <robc@krandor.nl>
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -16,29 +17,43 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef OAUTHEXCEPTION_HH
-#define OAUTHEXCEPTION_HH
+#ifndef EXCEPTION_HH
+#define EXCEPTION_HH
+
 
 #include <string>
-#include "Exception.hh"
+#include <exception>
 
-class OAuthException : public Exception
-
+class Exception : public std::exception
 {
 public:
-  explicit OAuthException()
-    : Exception()
+  explicit Exception()
   {
   }
 
-  explicit OAuthException(const std::string &detail)
-    : Exception(detail)
+  explicit Exception(const std::string &detail)
+    : detailed_information(detail)
   {
   }
 
-  virtual ~OAuthException() throw()
+  explicit Exception(const Exception &parent, const std::string &detail)
+  {
+    detailed_information = parent.details() + ", " + detail;
+  }
+
+  virtual ~Exception() throw()
   {
   }
+
+  virtual std::string details() const throw()
+  {
+    return detailed_information;
+  }
+
+private:
+  //
+  std::string detailed_information;
 };
 
-#endif // OAUTHEXCEPTION_HH
+
+#endif // EXCEPTION_HH

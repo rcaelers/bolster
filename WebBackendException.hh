@@ -20,29 +20,20 @@
 #define WEBBACKENDEXCEPTION_HH
 
 #include <string>
-#include <exception>
+#include "Exception.hh"
 
-class WebBackendException : public std::exception
+class WebBackendException : public Exception
 
 {
 public:
   explicit WebBackendException(const std::string &detail)
-    : detailed_information(detail)
+    : Exception(detail)
   {
   }
 
   virtual ~WebBackendException() throw()
   {
   }
-
-  virtual std::string details() const throw()
-  {
-    return detailed_information;
-  }
-
-private:
-  //
-  std::string detailed_information;
 };
 
 #endif // WEBBACKENDEXCEPTION_HH
