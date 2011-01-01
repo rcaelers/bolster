@@ -35,7 +35,7 @@ include_directories(
 )
 
 add_definitions(-W -Wall -Wextra -g -O0)
-add_executable(oauth WebBackendSoup.cc OAuth.cc StringUtil.cc main.cc)
+add_executable(oauth WebBackendSoup.cc OAuth.cc UbuntuOneSSO.cc StringUtil.cc main.cc)
 target_link_libraries(oauth ${GLIB_LIBRARIES} ${LIBGCRYPT_LIBS} ${SOUP_LIBRARIES} ${KEYRING_LIBRARIES} ${JASON_LIBRARIES})
 
 add_definitions(-DHAVE_CONFIG_H=1)

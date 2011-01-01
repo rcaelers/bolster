@@ -1,6 +1,6 @@
 // main.cc --- OAuth test app
 //
-// Copyright (C) 2010 Rob Caelers <robc@krandor.org>
+// Copyright (C) 2010, 2011 Rob Caelers <robc@krandor.org>
 // All rights reserved.
 
 #include <string.h>
@@ -26,6 +26,7 @@ extern "C"
 
 #include "OAuth.hh"
 #include "WebBackendSoup.hh"
+#include "UbuntuOneSSO.hh"
 
 using namespace std;
 
@@ -176,14 +177,18 @@ using namespace std;
 // }
 
 static OAuth *web = NULL;
+static GMainLoop *loop = NULL;
 
-void result(int status, string msg)
+void result(bool status)
 {
-  cout << status << " " << msg << endl;
+  cout << status << endl;
+  g_main_loop_quit(loop);
+}
 
-  string response;
-  cout << web->request("GET", "http://localhost:8888/oauth/photo/", "", response) << endl;
-  cout << response << endl;
+void result_oauth(bool status, const string &msg)
+{
+  cout << status << endl;
+  g_main_loop_quit(loop);
 }
 
 int main(int argc, char **argv)
@@ -193,30 +198,21 @@ int main(int argc, char **argv)
 
   g_type_init();
 
-  GMainLoop *loop = g_main_loop_new(NULL, TRUE);
+  loop = g_main_loop_new(NULL, TRUE);
 
-  IWebBackend *backend = new WebBackendSoup();
-  web = new OAuth(backend,
-                  "http://127.0.0.1:8888/oauth/request_token/",
-                  "http://127.0.0.1:8888/oauth/authorize/",
-                  "http://127.0.0.1:8888/oauth/access_token/",
-                  "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
-                  "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
-
-  // Ubuntu One:
+  // IWebBackend *backend = new WebBackendSoup();
   // web = new OAuth(backend,
-  //                 "https://one.ubuntu.com/oauth/request/",
-  //                 "https://one.ubuntu.com/oauth/authorize/",
-  //                 "https://one.ubuntu.com/oauth/access/", 
+  //                 "http://127.0.0.1:8888/oauth/request_token/",
+  //                 "http://127.0.0.1:8888/oauth/authorize/",
+  //                 "http://127.0.0.1:8888/oauth/access_token/",
   //                 "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
   //                 "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
+  // 
+  // OAuth::RequestParams parameters;
+  // web->init("Hello", "World", parameters, &result_oauth);
   
-  
-  OAuth::RequestParams parameters;
-  web->init("Hello", "World", parameters, &result);
-  // Ubuntu One
-  web->init("anyone", "anyone", parameters, &result);
-
+  UbuntuOneSSO one;
+  one.init(&result);
 
   g_main_loop_run(loop);
   g_main_loop_unref(loop);
