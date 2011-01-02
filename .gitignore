@@ -4,6 +4,7 @@
 /*.patch
 /*.spec
 /*.tar.gz
+/*.pyc
 /.new.ltmain.sh
 /Makefile
 /Makefile.in
@@ -55,3 +56,4 @@
 /subdirs
 /*~
 /build
+/old
