@@ -43,7 +43,6 @@ public:
 private:
   void init_secrets();
   void init_dbus();
-  void init_oauth();
 
   void check_readiness();
   

@@ -16,8 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef UBUNTUCOUCH_HH
-#define UBUNTUCOUCH_HH
+#ifndef UBUNTUONECOUCH_HH
+#define UBUNTUONECOUCH_HH
 
 #include <string>
 #include <map>
@@ -30,11 +30,11 @@ class UbuntuOneSSO;
 
 #include "Exception.hh"
 
-class UbuntuCouch : public CouchDB
+class UbuntuOneCouch : public CouchDB
 {
 public:
- 	UbuntuCouch();
-  virtual ~UbuntuCouch();
+ 	UbuntuOneCouch();
+  virtual ~UbuntuOneCouch();
   
   void init();
   

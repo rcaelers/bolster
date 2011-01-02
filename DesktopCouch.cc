@@ -58,17 +58,10 @@ DesktopCouch::~DesktopCouch()
 void
 DesktopCouch::init()
 {
-  init_oauth();
+  CouchDB::init();
+  
   init_dbus();
   init_secrets();
-}
-
-
-void
-DesktopCouch::init_oauth()
-{
-  backend = new WebBackendSoup();
-  oauth = new OAuth(backend);
 }
 
 

@@ -56,4 +56,13 @@ CouchDB::~CouchDB()
 void
 CouchDB::init()
 {
+  init_oauth();
+}
+
+
+void
+CouchDB::init_oauth()
+{
+  backend = new WebBackendSoup();
+  oauth = new OAuth(backend);
 }

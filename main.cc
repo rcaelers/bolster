@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 
+#include "UbuntuOneCouch.hh"
 #include "DesktopCouch.hh"
 
 using namespace std;
@@ -32,7 +33,7 @@ int main(int argc, char **argv)
   // OAuth::RequestParams parameters;
   // web->init("Hello", "World", parameters, &result_oauth);
   
-  DesktopCouch c;
+  UbuntuOneCouch c;
   c.init();
 
   g_main_loop_run(loop);

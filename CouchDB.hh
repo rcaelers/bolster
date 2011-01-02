@@ -35,6 +35,9 @@ public:
   virtual ~CouchDB();
   
   virtual void init();
+
+private:
+  void init_oauth();
   
 protected:
   std::string couch_uri;
