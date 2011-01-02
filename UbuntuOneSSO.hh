@@ -32,16 +32,16 @@ class IWebBackend;
 class UbuntuOneSSO
 {
 public:
-  typedef boost::function<void (bool success) > PairResult;
+  typedef boost::function<void (const std::string &, const std::string &, const std::string &, const std::string &) > PairingSuccessCallback;
+  typedef boost::function<void () > PairingFailedCallback;
 
  	UbuntuOneSSO();
   virtual ~UbuntuOneSSO();
   
-  void init(PairResult callback);
+  void init(PairingSuccessCallback success_cb, PairingFailedCallback failed_cb);
   
 private:
   void init_sso();
-  void init_oauth();
   void pair_sso();
   void pair_oauth();
   
@@ -55,26 +55,8 @@ private:
   GDBusProxy *proxy;
   OAuth *oauth;
   IWebBackend *backend;
-  PairResult callback;
+  PairingSuccessCallback success_cb;
+  PairingFailedCallback failed_cb;
 };
-
-
-// FIXME: move
-template<class K, class V>
-V map_get(const std::map<K, V> m, K key)
-{
-  V ret;
-  typename std::map<K,V>::const_iterator it;
-  
-  if ((it = m.find(key)) != m.end())
-    {
-      ret = it->second;
-    }
-  else
-    {
-      throw Exception(std::string("key ") + key + " not found");
-    }
-  return ret;
-}
   
 #endif

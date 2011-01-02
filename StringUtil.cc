@@ -1,6 +1,6 @@
 // StringUtil.cc --- General purpose string utility functions
 //
-// Copyright (C) 2007, 2010 Rob Caelers & Raymond Penners
+// Copyright (C) 2007, 2010, 2011 Rob Caelers & Raymond Penners
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -30,7 +30,7 @@
 using namespace std;
 
 void
-StringUtil::split(const string &in, const char delim, vector<std::string> &result)
+StringUtil::split(const string &in, const char delim, vector<string> &result)
 {
   string::size_type start_pos = 0;
   string::size_type end_pos = in.find(delim, 0);

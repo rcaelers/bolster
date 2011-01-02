@@ -30,7 +30,7 @@
 #include "WebBackendSoup.hh"
 #include "WebBackendException.hh"
 #include "StringUtil.hh"
-
+#include "GDBusWrapper.hh"
 
 using namespace std;
 
@@ -114,7 +114,7 @@ UbuntuOneSSO::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_nam
 
 
 void
-UbuntuOneSSO::on_credentials_success(const std::string &app_name, const std::map<std::string, std::string> &credentials)
+UbuntuOneSSO::on_credentials_success(const string &app_name, const map<string, string> &credentials)
 {
   (void) app_name;
 
@@ -125,10 +125,7 @@ UbuntuOneSSO::on_credentials_success(const std::string &app_name, const std::map
       string token_key = map_get(credentials, string("token"));
       string token_secret = map_get(credentials, string("token_secret"));
 
-      OAuth::RequestParams parameters;
-      oauth->init(consumer_key, consumer_secret, token_key, token_secret, parameters);
-
-      callback(true);
+      success_cb(consumer_key, consumer_secret, token_key, token_secret);
     }
   catch(Exception &e)
     {
@@ -140,7 +137,7 @@ UbuntuOneSSO::on_credentials_success(const std::string &app_name, const std::map
 
 
 void
-UbuntuOneSSO::on_credentials_failed(const std::string &app_name)
+UbuntuOneSSO::on_credentials_failed(const string &app_name)
 {
   (void) app_name;
 
@@ -154,15 +151,33 @@ void
 UbuntuOneSSO::on_oauth_result(bool success, const string &msg)
 {
   (void) msg;
-  callback(success);
+  
+  if (success)
+    {
+      string consumer_key;
+      string consumer_secret;
+      string token_key;
+      string token_secret;
+      
+      oauth->get_credentials(consumer_key, consumer_secret, token_key, token_secret);
+  
+      success_cb(consumer_key, consumer_secret, token_key, token_secret);
+    }
+  else
+    {
+      failed_cb();
+    }
+
+  delete oauth;
+  oauth = NULL;
 }
 
 void
-UbuntuOneSSO::init(PairResult callback)
+UbuntuOneSSO::init(PairingSuccessCallback success_cb, PairingFailedCallback failed_cb)
 {
-  this->callback = callback;
-
-  init_oauth();
+  this->success_cb = success_cb;
+  this->failed_cb = failed_cb;
+  
   init_sso();
   
   if (proxy != NULL)
@@ -171,7 +186,6 @@ UbuntuOneSSO::init(PairResult callback)
     }
   else
     {
-      callback(false);
       pair_oauth();
     }
 }
@@ -201,21 +215,6 @@ UbuntuOneSSO::init_sso()
 
 
 void
-UbuntuOneSSO::init_oauth()
-{
-  // FIXME: retrieve OAuth URL from Ubuntu.
-  // FIXME: Customize html
-  backend = new WebBackendSoup();
-  oauth = new OAuth(backend,
-                  "https://one.ubuntu.com/oauth/request/",
-                  "https://one.ubuntu.com/oauth/authorize/",
-                  "https://one.ubuntu.com/oauth/access/", 
-                  "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
-                  "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
-}
-
-
-void
 UbuntuOneSSO::pair_sso()
 {
   GError *error = NULL;
@@ -224,16 +223,13 @@ UbuntuOneSSO::pair_sso()
   g_variant_builder_init(&b, G_VARIANT_TYPE("a{ss}"));
   g_variant_builder_add(&b, "{ss}", "help_text", "Workrave wants to access you Ubuntu One account");
 
-  g_debug("1");
   g_dbus_proxy_call_sync(proxy,
                          "register",
-                         g_variant_new("(sa{ss})", "Workrave", &b),
+                         g_variant_new("(sa{ss})", "Ubuntu One", &b),
                          G_DBUS_CALL_FLAGS_NONE,
                          -1,
                          NULL,
                          &error);
-  g_debug("2");
-      
   if (error != NULL)
     {
       g_debug("Failed to register");
@@ -248,6 +244,16 @@ UbuntuOneSSO::pair_oauth()
 {
   try
     {
+      // FIXME: retrieve OAuth URL from Ubuntu.
+      // FIXME: Customize html
+      backend = new WebBackendSoup();
+      oauth = new OAuth(backend,
+                        "https://one.ubuntu.com/oauth/request/",
+                        "https://one.ubuntu.com/oauth/authorize/",
+                        "https://one.ubuntu.com/oauth/access/", 
+                        "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
+                        "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
+
       OAuth::RequestParams parameters;
       oauth->init("anyone", "anyone", parameters, boost::bind(&UbuntuOneSSO::on_oauth_result, this, _1, _2));
     }

@@ -6,6 +6,13 @@
 ** DONE [#B] Add Exception handling
 ** DONE [#C] Remove libcrypto++
 ** TODO [#A] Check for memory leaks (valgrind)
+** TODO [#C] Rename all callback functions to 'on_*'
+** TODO [#C] Use uniform callback style.
+
+* DBus
+
+** TODO [#C] Make all calls async
+** TODO [#C] Create wrapper for signals
 
 * OAuth
 
@@ -14,6 +21,7 @@
 ** DONE [#A] Add support for OAuth http requests
 ** DONE [#B] Add custom OAuth headers (e.g. Realm)
 ** DONE [#B] Test with Ubuntu One
+** TODO [#C] Remove string message from result callback 
 
 * WebBackend
 
@@ -29,6 +37,12 @@
 
 * Couch
 
-** TODO [#B] Add support for desktop CouchDB
+** TODO [#B] Add support for CouchDB*
+** DONE [#B] Add support for desktop CouchDB
 ** TODO [#C] Add support for Ubuntu One CouchDB
 
+* UbuntuSSO
+
+** TODO [#D] Retrieve OAuth URIs from Ubuntu webservice
+** TODO [#D] Make OAuth html response configurable
+** TODO [#C] Make all DBUS call asynchronous

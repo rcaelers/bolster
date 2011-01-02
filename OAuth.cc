@@ -63,7 +63,6 @@ OAuth::OAuth(IWebBackend *backend,
   signature_method = "HMAC-SHA1";
 }
 
-
 void
 OAuth::init(const string &consumer_key, const string &consumer_secret, const RequestParams &custom_headers, OAuthResult callback)
 {
@@ -111,7 +110,26 @@ OAuth::request(const string &http_method,
 
   backend->request(http_method, uri, body, oauth_header, callback);
 }
-  
+
+
+bool
+OAuth::has_credentials() const
+{
+  return consumer_key != "" &&
+    consumer_secret != "" &&
+    token_key != "" &&
+    token_secret != "";
+}
+
+void
+OAuth::get_credentials(string &consumer_key, string &consumer_secret, string &token_key, string &token_secret)
+{
+  consumer_key = this->consumer_key;
+  consumer_secret = this->consumer_secret;
+  token_key = this->token_key;
+  token_secret = this->token_secret;
+}
+
 const string
 OAuth::get_timestamp() const
 {

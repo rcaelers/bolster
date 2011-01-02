@@ -34,11 +34,11 @@ public:
   
 public:
  	OAuth(IWebBackend *backend,
-        const std::string &temporary_request_uri,
-        const std::string &authorize_uri,
-        const std::string &token_request_uri,
-        const std::string &success_html,
-        const std::string &failure_html);
+        const std::string &temporary_request_uri = "",
+        const std::string &authorize_uri = "",
+        const std::string &token_request_uri = "",
+        const std::string &success_html = "",
+        const std::string &failure_html= "");
 
   void init(const std::string &consumer_key, const std::string &consumer_secret, const RequestParams &custom_headers, OAuthResult callback);
   void init(const std::string &consumer_key, const std::string &consumer_secret, const std::string &token_key, std::string const &token_secret, const RequestParams &custom_headers);
@@ -52,6 +52,9 @@ public:
                const std::string &uri,
                const std::string &body,
                const WebReplyCallback callback);
+
+  bool has_credentials() const;
+  void get_credentials(std::string &consumer_key, std::string &consumer_secret, std::string &token_key, std::string &token_secret);
   
 private:
   enum ParameterMode { ParameterModeHeader, ParameterModeRequest, ParameterModeSignatureBase };
