@@ -23,6 +23,7 @@
 #include "Secrets.hh"
 
 #include <glib.h>
+#include "boost/bind.hpp"
 
 #include "OAuth.hh"
 #include "OAuthException.hh"
@@ -33,112 +34,179 @@
 
 using namespace std;
 
-Secrets::Secrets()
-  : secrets_service(NULL),
-    secrets_session(NULL),
-    secrets_item(NULL),
-    secrets_prompt(NULL)
+Secrets::Secrets::Secrets()
+  : service(NULL),
+    session(NULL),
+    item(NULL)
 {
 }
 
 
-Secrets::~Secrets()
+Secrets::Secrets::~Secrets()
 {
-  close_session();
+  if (service != NULL)
+    {
+      delete service;
+    }
+
+  if (session != NULL)
+    {
+      delete session;
+    }
+
+  if (item != NULL)
+    {
+      delete item;
+    }
 }
 
 
 void
-Secrets::init(const Attributes &attributes, SuccessCallback success_cb, FailedCallback failed_cb)
+Secrets::Secrets::init(const Attributes &attributes, SuccessCallback success_cb, FailedCallback failed_cb)
 {
   try
     {
       this->success_cb = success_cb;
       this->failed_cb = failed_cb;
+
+      service = new Service();
+      service->init();
       
-      open_session();
+      session = NULL;
+      service->open(&session);
 
       ItemList locked_secrets;
       ItemList unlocked_secrets;
-      search(attributes, locked_secrets, unlocked_secrets);
+      service->search(attributes, locked_secrets, unlocked_secrets);
 
       if (unlocked_secrets.size() == 0 && locked_secrets.size() > 0)
         {
-          unlock(locked_secrets, unlocked_secrets);
+          service->unlock(locked_secrets, unlocked_secrets,
+                          boost::bind(&Secrets::on_unlocked, this, _1));
         }
       
       if (unlocked_secrets.size() > 0)
         {
-          string secret = get_secret(unlocked_secrets.front());
+          item = new Item(unlocked_secrets.front());
+          item->init();
+          
+          string secret = item->get_secret(session->get_path());
           success_cb(secret);
-          close_session();
+
+          service->lock(unlocked_secrets);
+          
+          session->close();
         }
     }
   catch (Exception)
     {
       failed_cb();
-      close_session();
+      session->close();
+    }
+}
+
+void
+Secrets::Secrets::on_unlocked(const ItemList &unlocked_secrets)
+{
+  try
+    {
+      item = new Item(unlocked_secrets.front());
+      item->init();
+          
+      string secret = item->get_secret(session->get_path());
+      success_cb(secret);
+
+      session->close();
+    }
+  catch (Exception)
+    {
+      failed_cb();
+      session->close();
+    }
+}
+
+
+
+Secrets::DBusObject::DBusObject(const std::string &service_name, const std::string &object_path, const std::string &interface_name)
+  : service_name(service_name),
+    object_path(object_path),
+    interface_name(interface_name)
+{
+}
+
+
+Secrets::DBusObject::~DBusObject()
+{
+  if (proxy != NULL)
+    {
+      g_object_unref(proxy);
     }
 }
 
 
 void
-Secrets::on_signal_static(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters, gpointer user_data)
+Secrets::DBusObject::init()
 {
-  Secrets *u = (Secrets *)user_data;
-  u->on_signal(proxy, sender_name, signal_name, parameters);
+  GError *error = NULL;
+  proxy = g_dbus_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION,
+                                        G_DBUS_PROXY_FLAGS_NONE,
+                                        NULL,
+                                        service_name.c_str(),
+                                        object_path.c_str(),
+                                        interface_name.c_str(),
+                                        NULL,
+                                        &error);
+  if (error != NULL)
+    {
+      string error_msg = error->message;
+      g_error_free(error);
+      throw Exception("Cannot open secrets: " + error_msg);
+    }
+
+  if (error == NULL && proxy != NULL)
+    {
+      g_signal_connect(proxy,
+                       "g-signal",
+                       G_CALLBACK(&DBusObject::on_signal_static),
+                       this);
+
+    }
 }
 
 
 void
-Secrets::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters)
+Secrets::DBusObject::on_signal_static(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters, gpointer user_data)
+{
+  DBusObject *obj = (DBusObject *)user_data;
+  obj->on_signal(proxy, sender_name, signal_name, parameters);
+  g_debug("on_signal static");
+
+}
+
+
+void
+Secrets::DBusObject::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters)
 {
   (void) proxy;
   (void) sender_name;
+  (void) signal_name;
+  (void) parameters;
+  g_debug("on_signal empty");
+
+}
+
   
-  bool dismissed;
-  GVariant *result = NULL;
-  
-  if (string(signal_name) == "Completed")
-    {
-      g_variant_get(parameters, "(bv)", &dismissed, &result);
-
-      if (!dismissed)
-        {
-          GVariantIter *unlocked_iter = NULL;
-          g_variant_get(result, "ao", &unlocked_iter);
-      
-          ItemList unlocked_secrets;
-          char *path;
-          while (g_variant_iter_loop(unlocked_iter, "o", &path))
-            {
-              unlocked_secrets.push_back(path);
-            }
-
-          string secret = get_secret(unlocked_secrets.front());
-
-          g_variant_iter_free(unlocked_iter);
-
-          success_cb(secret);
-        }
-      else
-        {
-          failed_cb();
-        }
-
-      close_session();
-      g_variant_unref(result);
-    }
+Secrets::Service::Service()
+  : DBusObject("org.freedesktop.secrets", "/org/freedesktop/secrets" , "org.freedesktop.Secret.Service") 
+{
 }
 
 
 void
-Secrets::open_session()
+Secrets::Service::open(Session **session)
 {
-  init_secrets_service();
-      
   GError *error = NULL;
-  GVariant *result = g_dbus_proxy_call_sync(secrets_service,
+  GVariant *result = g_dbus_proxy_call_sync(proxy,
                                             "OpenSession",
                                             g_variant_new("(sv)",
                                                           "plain",
@@ -159,7 +227,8 @@ Secrets::open_session()
   char *path = NULL;
   g_variant_get(result, "(vo)", &var, &path);
 
-  init_secrets_session(path);
+  *session = new Session(path);
+  (*session)->init();
 
   g_variant_unref(result);
   g_variant_unref(var);
@@ -168,59 +237,7 @@ Secrets::open_session()
 
 
 void
-Secrets::close_session()
-{
-  if (secrets_session != NULL)
-    {
-      GError *error = NULL;
-      GVariant *result = g_dbus_proxy_call_sync(secrets_session,
-                                                "Close",
-                                                NULL,
-                                                G_DBUS_CALL_FLAGS_NONE,
-                                                -1,
-                                                NULL,
-                                                &error);
-      if (error != NULL)
-        {
-          string error_msg = error->message;
-          g_error_free(error);
-        }
-      else
-        {
-          g_variant_unref(result);
-        }
-    }
-
-  if (secrets_service != NULL)
-    {
-      g_object_unref(secrets_service);
-      secrets_service = NULL;
-    }
-
-  if (secrets_session != NULL)
-    {
-      g_object_unref(secrets_session);
-      secrets_session = NULL;
-      secrets_session_object_path = "";
-    }
-  
-  if (secrets_item != NULL)
-    {
-      g_object_unref(secrets_item);
-      secrets_item = NULL;
-      secrets_item_object_path = "";
-    }
-
-  if (secrets_prompt != NULL)
-    {
-      g_object_unref(secrets_prompt);
-      secrets_prompt = NULL;
-      secrets_prompt_object_path = "";
-    }
-}
-
-void
-Secrets::search(const Attributes &attributes, ItemList &locked, ItemList &unlocked)
+Secrets::Service::search(const Attributes &attributes, ItemList &locked, ItemList &unlocked)
 {
   GVariantBuilder b;
   g_variant_builder_init(&b, G_VARIANT_TYPE("a{ss}"));
@@ -231,7 +248,7 @@ Secrets::search(const Attributes &attributes, ItemList &locked, ItemList &unlock
     }
           
   GError *error = NULL;
-  GVariant *result = g_dbus_proxy_call_sync(secrets_service,
+  GVariant *result = g_dbus_proxy_call_sync(proxy,
                                             "SearchItems",
                                             g_variant_new("(a{ss})", &b),
                                             G_DBUS_CALL_FLAGS_NONE,
@@ -266,7 +283,7 @@ Secrets::search(const Attributes &attributes, ItemList &locked, ItemList &unlock
 
 
 void
-Secrets::unlock(const ItemList &locked, ItemList &unlocked)
+Secrets::Service::unlock(const ItemList &locked, ItemList &unlocked, UnlockedCallback callback)
 {
   GVariantBuilder b;
   g_variant_builder_init(&b, G_VARIANT_TYPE("ao"));
@@ -278,7 +295,7 @@ Secrets::unlock(const ItemList &locked, ItemList &unlocked)
 
           
   GError *error = NULL;
-  GVariant *result = g_dbus_proxy_call_sync(secrets_service,
+  GVariant *result = g_dbus_proxy_call_sync(proxy,
                                             "Unlock",
                                             g_variant_new("(ao)", &b),
                                             G_DBUS_CALL_FLAGS_NONE,
@@ -305,22 +322,35 @@ Secrets::unlock(const ItemList &locked, ItemList &unlocked)
 
   if (unlocked.size() == 0 && string(prompt_path) != "/")
     {
-      prompt(prompt_path);
+      Prompt *p = new Prompt(prompt_path, callback);
+      p->init();
+      p->prompt();
     }
-
+  else
+    {
+      callback(unlocked);
+    }
+  
   g_variant_unref(result);
 }
 
 
 void
-Secrets::prompt(const string &path)
+Secrets::Service::lock(const ItemList &unlocked)
 {
-  init_secrets_prompt(path);
-  
+  GVariantBuilder b;
+  g_variant_builder_init(&b, G_VARIANT_TYPE("ao"));
+
+  for (ItemList::const_iterator i = unlocked.begin(); i != unlocked.end(); i++)
+    {
+      g_variant_builder_add(&b, "o", i->c_str());
+    }
+
+          
   GError *error = NULL;
-  GVariant *result = g_dbus_proxy_call_sync(secrets_prompt,
-                                            "Prompt",
-                                            g_variant_new("(s)", ""),
+  GVariant *result = g_dbus_proxy_call_sync(proxy,
+                                            "Lock",
+                                            g_variant_new("(ao)", &b),
                                             G_DBUS_CALL_FLAGS_NONE,
                                             -1,
                                             NULL,
@@ -332,20 +362,75 @@ Secrets::prompt(const string &path)
       g_error_free(error);
       throw Exception("Cannot lock secrets: " + error_msg);
     }
+
+  GVariantIter *locked_iter = NULL;
+  char *prompt_path = NULL;
+  g_variant_get(result, "(aoo)", &locked_iter, &prompt_path);
+
+  char *path;
+  ItemList locked;
+  while (g_variant_iter_loop(locked_iter, "o", &path))
+    {
+      locked.push_back(path);
+    }
+
+  if (locked.size() == 0 && string(prompt_path) != "/")
+    {
+      // Prompt *p = new Prompt(prompt_path, callback);
+      // p->init();
+      // p->prompt();
+    }
   
   g_variant_unref(result);
 }
 
 
-string
-Secrets::get_secret(const string &item_path)
+Secrets::Session::Session(const std::string &object_path)
+  : DBusObject("org.freedesktop.secrets", object_path, "org.freedesktop.Secret.Session")
 {
-  init_secrets_item(item_path);
-  
+}
+
+
+void
+Secrets::Session::close()
+{
+  if (proxy != NULL)
+    {
+      GError *error = NULL;
+      GVariant *result = g_dbus_proxy_call_sync(proxy,
+                                                "Close",
+                                                NULL,
+                                                G_DBUS_CALL_FLAGS_NONE,
+                                                -1,
+                                                NULL,
+                                                &error);
+      if (error != NULL)
+        {
+          string error_msg = error->message;
+          g_error_free(error);
+        }
+      else
+        {
+          g_variant_unref(result);
+        }
+    }
+}
+
+
+
+Secrets::Item::Item(const std::string &object_path)
+  : DBusObject("org.freedesktop.secrets", object_path, "org.freedesktop.Secret.Item")
+{
+}
+
+
+string
+Secrets::Item::get_secret(const string &session_path)
+{
   GError *error = NULL;
-  GVariant *result = g_dbus_proxy_call_sync(secrets_item,
+  GVariant *result = g_dbus_proxy_call_sync(proxy,
                                             "GetSecret",
-                                            g_variant_new("(o)", secrets_session_object_path.c_str()),
+                                            g_variant_new("(o)", session_path.c_str()),
                                             G_DBUS_CALL_FLAGS_NONE,
                                             -1,
                                             NULL,
@@ -378,101 +463,75 @@ Secrets::get_secret(const string &item_path)
 }
 
 
-GDBusProxy *
-Secrets::get_secrets_proxy(const string &object_path, const string &interface_name)
+
+Secrets::Prompt::Prompt(const std::string &object_path, UnlockedCallback callback)
+  : DBusObject("org.freedesktop.secrets", object_path, "org.freedesktop.Secret.Prompt"),
+    callback(callback)
+{
+}
+
+
+void
+Secrets::Prompt::prompt()
 {
   GError *error = NULL;
-  GDBusProxy *proxy = g_dbus_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION,
-                                                    G_DBUS_PROXY_FLAGS_NONE,
-                                                    NULL,
-                                                    "org.freedesktop.secrets",
-                                                    object_path.c_str(),
-                                                    interface_name.c_str(),
-                                                    NULL,
-                                                    &error);
+  GVariant *result = g_dbus_proxy_call_sync(proxy,
+                                            "Prompt",
+                                            g_variant_new("(s)", ""),
+                                            G_DBUS_CALL_FLAGS_NONE,
+                                            -1,
+                                            NULL,
+                                            &error);
+
   if (error != NULL)
     {
       string error_msg = error->message;
       g_error_free(error);
-      throw Exception("Cannot open secrets: " + error_msg);
-    }
-
-  return proxy;
-}
-
-
-void
-Secrets::init_secrets_service()
-{
-  if (secrets_service == NULL)
-    {
-      secrets_service = get_secrets_proxy("/org/freedesktop/secrets", "org.freedesktop.Secret.Service");
-    }
-}
-
-
-void
-Secrets::init_secrets_session(const string &path)
-{
-  if (secrets_session_object_path != path && secrets_session != NULL)
-    {
-      g_object_unref(secrets_session);
-      secrets_session = NULL;
-    }
-
-  if (secrets_session == NULL)
-    {
-      secrets_session = get_secrets_proxy(path, "org.freedesktop.Secret.Session");
-      if (secrets_session != NULL)
-        {
-          secrets_session_object_path = path;
-        }
-    }
-}
-
-
-void
-Secrets::init_secrets_item(const string &path)
-{
-  if (secrets_item_object_path != path && secrets_item != NULL)
-    {
-      g_object_unref(secrets_item);
-      secrets_item = NULL;
+      throw Exception("Cannot lock secrets: " + error_msg);
     }
   
-  if (secrets_item == NULL)
-    {
-      secrets_item = get_secrets_proxy(path, "org.freedesktop.Secret.Item");
-      if (secrets_item != NULL)
-        {
-          secrets_item_object_path = path;
-        }
-    }
+  g_variant_unref(result);
 }
 
 
 void
-Secrets::init_secrets_prompt(const string &path)
+Secrets::Prompt::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters)
 {
-  if (secrets_prompt_object_path != path && secrets_prompt != NULL)
-    {
-      g_object_unref(secrets_prompt);
-      secrets_prompt = NULL;
-    }
+  (void) proxy;
+  (void) sender_name;
   
-  if (secrets_prompt == NULL)
-    {
-      secrets_prompt = get_secrets_proxy(path, "org.freedesktop.Secret.Prompt");
+  bool dismissed;
+  GVariant *result = NULL;
+  ItemList unlocked_secrets;
 
-      if (secrets_prompt != NULL)
+  g_debug("on_signal");
+  if (string(signal_name) == "Completed")
+    {
+      g_variant_get(parameters, "(bv)", &dismissed, &result);
+
+      if (!dismissed)
         {
-          secrets_prompt_object_path = path;
-          
-          g_signal_connect(secrets_prompt,
-                           "g-signal",
-                           G_CALLBACK(&Secrets::on_signal_static),
-                           this);
+          GVariantIter *unlocked_iter = NULL;
+          g_variant_get(result, "ao", &unlocked_iter);
+      
+          char *path;
+          while (g_variant_iter_loop(unlocked_iter, "o", &path))
+            {
+              unlocked_secrets.push_back(path);
+            }
+
+          callback(unlocked_secrets);
+         
+          g_variant_iter_free(unlocked_iter);
         }
+      else
+        {
+          callback(unlocked_secrets);
+        }
+
+      g_variant_unref(result);
     }
 }
+
+
 

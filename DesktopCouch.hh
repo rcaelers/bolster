@@ -24,7 +24,9 @@
 
 #include "CouchDB.hh"
 
+namespace Secrets {
 class Secrets;
+}
 
 #include "Exception.hh"
 
@@ -46,7 +48,7 @@ private:
   void on_secret_failed();
   void on_port(GVariant *var, GError *error, GDBusProxy *proxy); 
  
-  Secrets *secrets;
+  Secrets::Secrets *secrets;
   int couch_port;
 };
   

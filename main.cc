@@ -33,7 +33,8 @@ int main(int argc, char **argv)
   // OAuth::RequestParams parameters;
   // web->init("Hello", "World", parameters, &result_oauth);
   
-  UbuntuOneCouch c;
+  // UbuntuOneCouch c;
+  DesktopCouch c;
   c.init();
 
   g_main_loop_run(loop);

@@ -101,7 +101,7 @@ DesktopCouch::init_dbus()
 void
 DesktopCouch::init_secrets()
 {
-  secrets = new Secrets();
+  secrets = new Secrets::Secrets();
 
   map<string, string> attributes;
   attributes["desktopcouch"] = "oauth";

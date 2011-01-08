@@ -28,48 +28,102 @@
 class OAuth;
 class IWebBackend;
 
-class Secrets
+namespace Secrets
 {
-public:
-  typedef boost::function<void (const std::string&) > SuccessCallback;
-  typedef boost::function<void () > FailedCallback;
   typedef std::map<std::string, std::string> Attributes;
   typedef std::list<std::string> ItemList;
-  
- 	Secrets();
-  virtual ~Secrets();
-  
-  void init(const Attributes &attributes, SuccessCallback success_cb, FailedCallback failed_cb);
 
-private:
-  void open_session();
-  void close_session();
-  void search(const Attributes &attributes, ItemList &locked, ItemList &unlocked);
-  void unlock(const ItemList &locked, ItemList &unlocked_secrets);
-  void prompt(const std::string &path);
-  std::string get_secret(const std::string &item_path);
+  typedef boost::function<void (const ItemList&) > UnlockedCallback;
 
-  GDBusProxy *get_secrets_proxy(const std::string &object_path, const std::string &interface_name);
-
-  void init_secrets_service();
-  void init_secrets_session(const std::string &path);
-  void init_secrets_item(const std::string &path);
-  void init_secrets_prompt(const std::string &path);
   
-  static void on_signal_static(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters, gpointer user_data);
-  void on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters);
+  class DBusObject
+  {
+  public:
+    DBusObject(const std::string &service_name, const std::string &object_path, const std::string &interface_name);
+    ~DBusObject();
 
-  GDBusProxy *secrets_service;
-  GDBusProxy *secrets_session;
-  GDBusProxy *secrets_item;
-  GDBusProxy *secrets_prompt;
+    virtual void init();
+    virtual void on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters);
 
-  std::string secrets_item_object_path;
-  std::string secrets_session_object_path;
-  std::string secrets_prompt_object_path;
+    std::string get_path() const { return object_path; }
+    
+  private:    
+    static void on_signal_static(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters, gpointer user_data);
+    
+  protected:
+    GDBusProxy *proxy;
+
+  private:
+    std::string service_name;
+    std::string object_path;
+    std::string interface_name;
+  };
+    
+  class Item : public DBusObject
+  {
+  public:
+    Item(const std::string &object_path);
+
+    std::string get_secret(const std::string &session_path);
+  };
+
   
-  SuccessCallback success_cb;
-  FailedCallback failed_cb;
-};
+  class Prompt : public DBusObject
+  {
+  public:
+    
+  public:
+    Prompt(const std::string &object_path, UnlockedCallback callback);
+    
+    void prompt();
+
+  private:
+    void on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters);
+
+    UnlockedCallback callback;
+  };
+
   
+  class Session : public DBusObject
+  {
+  public:
+    Session(const std::string &object_path);
+
+    void close();
+  };
+
+  class Service : public DBusObject
+  {
+  public:
+    Service();
+
+    void open(Session **session);
+    void search(const Attributes &attributes, ItemList &locked, ItemList &unlocked);
+    void unlock(const ItemList &locked, ItemList &unlocked_secrets, UnlockedCallback callback);
+    void lock(const ItemList &unlocked);
+  };
+  
+  class Secrets
+  {
+  public:
+    typedef boost::function<void (const std::string&) > SuccessCallback;
+    typedef boost::function<void () > FailedCallback;
+  
+    Secrets();
+    virtual ~Secrets();
+  
+    void init(const Attributes &attributes, SuccessCallback success_cb, FailedCallback failed_cb);
+
+  private:
+    void on_unlocked(const ItemList &unlocked_secrets);
+
+  private:
+    SuccessCallback success_cb;
+    FailedCallback failed_cb;
+
+    Service *service;
+    Session *session;
+    Item *item;
+  };
+}
 #endif
