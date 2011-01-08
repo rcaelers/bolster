@@ -20,14 +20,10 @@
 #define DESKTOPCOUCH_HH
 
 #include <string>
-#include <map>
 #include <gio/gio.h>
-#include <boost/function.hpp>
 
 #include "CouchDB.hh"
 
-class OAuth;
-class IWebBackend;
 class Secrets;
 
 #include "Exception.hh"

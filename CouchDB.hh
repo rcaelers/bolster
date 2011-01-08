@@ -20,13 +20,9 @@
 #define COUCHDB_HH
 
 #include <string>
-#include <map>
-#include <boost/function.hpp>
 
 class OAuth;
 class IWebBackend;
-
-#include "Exception.hh"
 
 class CouchDB
 {

@@ -28,8 +28,6 @@
 class OAuth;
 class IWebBackend;
 
-#include "Exception.hh"
-
 class Secrets
 {
 public:
@@ -56,7 +54,6 @@ private:
   void init_secrets_session(const std::string &path);
   void init_secrets_item(const std::string &path);
   void init_secrets_prompt(const std::string &path);
-
   
   static void on_signal_static(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters, gpointer user_data);
   void on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters);
