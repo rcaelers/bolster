@@ -64,12 +64,14 @@ OAuth::OAuth(IWebBackend *backend,
 }
 
 void
-OAuth::init(const string &consumer_key, const string &consumer_secret, const RequestParams &custom_headers, OAuthResult callback)
+OAuth::init(const string &consumer_key, const string &consumer_secret, const RequestParams &custom_headers,
+            SuccessCallback success_cb, FailedCallback failure_cb)
 {
   this->consumer_key = consumer_key;
   this->consumer_secret = consumer_secret;
-  this->oauth_result_callback = callback;
   this->custom_headers = custom_headers;
+  this->success_cb = success_cb;
+  this->failure_cb = failure_cb;
   
   request_temporary_credentials();
 }
@@ -417,11 +419,11 @@ OAuth::request_temporary_credentials()
     }
   catch(OAuthException &oe)
     {
-      oauth_result_callback(false, string("OAuth failure") + oe.details());
+      failure_cb();
     }
   catch(WebBackendException &we)
     {
-      oauth_result_callback(false, string("OAuth failure") + we.details());
+      failure_cb();
     }
 }
 
@@ -461,7 +463,7 @@ OAuth::on_temporary_credentials_ready(int status, const string &response)
     }
   catch(OAuthException &oe)
     {
-      oauth_result_callback(false, string("OAuth failure ") + oe.details());
+      failure_cb();
     }
 }
 
@@ -496,7 +498,7 @@ OAuth::request_resource_owner_authorization()
     }
   catch(OAuthException &oe)
     {
-      oauth_result_callback(false, string("OAuth failure") + oe.details());
+      failure_cb();
     }
 }
 
@@ -541,11 +543,11 @@ OAuth::on_resource_owner_authorization_ready(const string &method, const string 
     }
   catch(WebBackendException &we)
     {
-      oauth_result_callback(false, string("OAuth failure") + we.details());
+      failure_cb();
     }
   catch(OAuthException &oe)
     {
-      oauth_result_callback(false, string("OAuth failure") + oe.details());
+      failure_cb();
     }
 }
 
@@ -570,11 +572,11 @@ OAuth::request_token(const string &token, const string &verifier)
     }
   catch(WebBackendException &we)
     {
-      oauth_result_callback(false, string("OAuth failure") + we.details());
+      failure_cb();
     }
   catch(OAuthException &oe)
     {
-      oauth_result_callback(false, string("OAuth failure") + oe.details());
+      failure_cb();
     }
   
 }
@@ -609,10 +611,10 @@ OAuth::on_token_ready(int status, const string &response)
       token_key = key;
       token_secret = secret;
 
-      oauth_result_callback(true, "OAuth successful");
+      success_cb();
     }
   catch(OAuthException &oe)
     {
-      oauth_result_callback(false, string("OAuth failure") + oe.details());
+      failure_cb();
     }
 }

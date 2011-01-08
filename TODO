@@ -7,7 +7,7 @@
 ** DONE [#C] Remove libcrypto++
 ** TODO [#A] Check for memory leaks (valgrind)
 ** DONE [#C] Rename all callback functions to 'on_*'
-** TODO [#C] Use uniform callback style.
+** DONE [#C] Use uniform callback style.
 
 * DBus
 
@@ -21,7 +21,7 @@
 ** DONE [#A] Add support for OAuth http requests
 ** DONE [#B] Add custom OAuth headers (e.g. Realm)
 ** DONE [#B] Test with Ubuntu One
-** TODO [#C] Remove string message from result callback 
+** DONE [#C] Remove string message from result callback 
 
 * WebBackend
 

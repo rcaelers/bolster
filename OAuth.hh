@@ -29,7 +29,9 @@ class OAuth
 {
 public:
   typedef std::map<std::string, std::string> RequestParams;
-  typedef boost::function<void (bool success, const std::string &) > OAuthResult;
+  typedef boost::function<void () > SuccessCallback;
+  typedef boost::function<void () > FailedCallback;
+
   typedef IWebBackend::WebReplyCallback WebReplyCallback;
   
 public:
@@ -40,7 +42,8 @@ public:
         const std::string &success_html = "",
         const std::string &failure_html= "");
 
-  void init(const std::string &consumer_key, const std::string &consumer_secret, const RequestParams &custom_headers, OAuthResult callback);
+  void init(const std::string &consumer_key, const std::string &consumer_secret, const RequestParams &custom_headers,
+            SuccessCallback success_cb, FailedCallback failure_cb);
   void init(const std::string &consumer_key, const std::string &consumer_secret, const std::string &token_key, std::string const &token_secret, const RequestParams &custom_headers);
   
   int request(const std::string &http_method,
@@ -81,8 +84,10 @@ private:
 
 private:  
   IWebBackend *backend;
-  OAuthResult oauth_result_callback;
   RequestParams custom_headers;
+
+  SuccessCallback success_cb;
+  FailedCallback failure_cb;
   
   std::string temporary_request_uri;
   std::string authorize_uri;

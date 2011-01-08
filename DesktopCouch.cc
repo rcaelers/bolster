@@ -106,29 +106,33 @@ DesktopCouch::init_secrets()
   map<string, string> attributes;
   attributes["desktopcouch"] = "oauth";
   
-  secrets->init(attributes, boost::bind(&DesktopCouch::on_secret, this, _1, _2));
+  secrets->init(attributes,
+                boost::bind(&DesktopCouch::on_secret_success, this, _1),
+                boost::bind(&DesktopCouch::on_secret_failed, this));
 }
 
   
 void
-DesktopCouch::on_secret(bool ok, const string &secret)
+DesktopCouch::on_secret_success(const string &secret)
 {
-  if (ok)
+  vector<string> elements;
+  StringUtil::split(secret, ':', elements);
+
+  if (elements.size() == 4)
     {
-      vector<string> elements;
-      StringUtil::split(secret, ':', elements);
+      OAuth::RequestParams parameters;
+      oauth->init(elements[0], elements[1], elements[2], elements[3], parameters);
 
-      if (elements.size() == 4)
-        {
-          OAuth::RequestParams parameters;
-          oauth->init(elements[0], elements[1], elements[2], elements[3], parameters);
-
-          g_debug("OK %s", secret.c_str());
-        }
+      g_debug("OK %s", secret.c_str());
     }
   check_readiness();
 }
 
+
+void
+DesktopCouch::on_secret_failed()
+{
+}
 
 void
 DesktopCouch::on_port(GVariant *var, GError *error, GDBusProxy *proxy)
@@ -142,6 +146,7 @@ DesktopCouch::on_port(GVariant *var, GError *error, GDBusProxy *proxy)
   g_object_unref(proxy);
   check_readiness();
 }
+
 
 void
 DesktopCouch::check_readiness()

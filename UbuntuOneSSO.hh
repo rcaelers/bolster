@@ -50,7 +50,8 @@ private:
   
   void on_credentials_success(const std::string &app_name, const std::map<std::string, std::string> &credentials);
   void on_credentials_failed(const std::string &app_name);
-  void on_oauth_result(bool success, const std::string &msg);
+  void on_oauth_success();
+  void on_oauth_failed();
 
   GDBusProxy *proxy;
   OAuth *oauth;

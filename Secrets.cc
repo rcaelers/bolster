@@ -49,6 +49,40 @@ Secrets::~Secrets()
 
 
 void
+Secrets::init(const Attributes &attributes, SuccessCallback success_cb, FailedCallback failed_cb)
+{
+  try
+    {
+      this->success_cb = success_cb;
+      this->failed_cb = failed_cb;
+      
+      open_session();
+
+      ItemList locked_secrets;
+      ItemList unlocked_secrets;
+      search(attributes, locked_secrets, unlocked_secrets);
+
+      if (unlocked_secrets.size() == 0 && locked_secrets.size() > 0)
+        {
+          unlock(locked_secrets, unlocked_secrets);
+        }
+      
+      if (unlocked_secrets.size() > 0)
+        {
+          string secret = get_secret(unlocked_secrets.front());
+          success_cb(secret);
+          close_session();
+        }
+    }
+  catch (Exception)
+    {
+      failed_cb();
+      close_session();
+    }
+}
+
+
+void
 Secrets::on_signal_static(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters, gpointer user_data)
 {
   Secrets *u = (Secrets *)user_data;
@@ -67,8 +101,6 @@ Secrets::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GV
   
   if (string(signal_name) == "Completed")
     {
-      string secret;
-      
       g_variant_get(parameters, "(bv)", &dismissed, &result);
 
       if (!dismissed)
@@ -83,48 +115,19 @@ Secrets::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GV
               unlocked_secrets.push_back(path);
             }
 
-          secret = get_secret(unlocked_secrets.front());
+          string secret = get_secret(unlocked_secrets.front());
 
           g_variant_iter_free(unlocked_iter);
-        }
-      
-      callback(!dismissed, secret);
-      close_session();
 
+          success_cb(secret);
+        }
+      else
+        {
+          failed_cb();
+        }
+
+      close_session();
       g_variant_unref(result);
-    }
-}
-
-
-void
-Secrets::init(const Attributes &attributes, SecretsResult callback)
-{
-  try
-    {
-      this->callback = callback;
-
-      open_session();
-
-      ItemList locked_secrets;
-      ItemList unlocked_secrets;
-      search(attributes, locked_secrets, unlocked_secrets);
-
-      if (unlocked_secrets.size() == 0 && locked_secrets.size() > 0)
-        {
-          unlock(locked_secrets, unlocked_secrets);
-        }
-      
-      if (unlocked_secrets.size() > 0)
-        {
-          string secret = get_secret(unlocked_secrets.front());
-          callback(true, secret);
-          close_session();
-        }
-    }
-  catch (Exception)
-    {
-      callback(false, "");
-      close_session();
     }
 }
 

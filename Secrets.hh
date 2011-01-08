@@ -31,14 +31,15 @@ class IWebBackend;
 class Secrets
 {
 public:
-  typedef boost::function<void (bool success, const std::string&) > SecretsResult;
+  typedef boost::function<void (const std::string&) > SuccessCallback;
+  typedef boost::function<void () > FailedCallback;
   typedef std::map<std::string, std::string> Attributes;
   typedef std::list<std::string> ItemList;
   
  	Secrets();
   virtual ~Secrets();
   
-  void init(const Attributes &attributes, SecretsResult callback);
+  void init(const Attributes &attributes, SuccessCallback success_cb, FailedCallback failed_cb);
 
 private:
   void open_session();
@@ -67,7 +68,8 @@ private:
   std::string secrets_session_object_path;
   std::string secrets_prompt_object_path;
   
-  SecretsResult callback;
+  SuccessCallback success_cb;
+  FailedCallback failed_cb;
 };
   
 #endif

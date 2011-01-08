@@ -42,7 +42,8 @@ private:
 
   void check_readiness();
   
-  void on_secret(bool ok, const std::string &secret);
+  void on_secret_success(const std::string &secret);
+  void on_secret_failed();
   void on_port(GVariant *var, GError *error, GDBusProxy *proxy); 
  
   Secrets *secrets;

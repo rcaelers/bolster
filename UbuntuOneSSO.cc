@@ -148,25 +148,24 @@ UbuntuOneSSO::on_credentials_failed(const string &app_name)
 
 
 void
-UbuntuOneSSO::on_oauth_result(bool success, const string &msg)
+UbuntuOneSSO::on_oauth_success()
 {
-  (void) msg;
+  string consumer_key;
+  string consumer_secret;
+  string token_key;
+  string token_secret;
   
-  if (success)
-    {
-      string consumer_key;
-      string consumer_secret;
-      string token_key;
-      string token_secret;
-      
-      oauth->get_credentials(consumer_key, consumer_secret, token_key, token_secret);
-  
-      success_cb(consumer_key, consumer_secret, token_key, token_secret);
-    }
-  else
-    {
-      failed_cb();
-    }
+  oauth->get_credentials(consumer_key, consumer_secret, token_key, token_secret);
+  success_cb(consumer_key, consumer_secret, token_key, token_secret);
+
+  delete oauth;
+  oauth = NULL;
+}
+
+void
+UbuntuOneSSO::on_oauth_failed()
+{
+  failed_cb();
 
   delete oauth;
   oauth = NULL;
@@ -255,10 +254,12 @@ UbuntuOneSSO::pair_oauth()
                         "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
 
       OAuth::RequestParams parameters;
-      oauth->init("anyone", "anyone", parameters, boost::bind(&UbuntuOneSSO::on_oauth_result, this, _1, _2));
+      oauth->init("anyone", "anyone", parameters,
+                  boost::bind(&UbuntuOneSSO::on_oauth_success, this),
+                  boost::bind(&UbuntuOneSSO::on_oauth_failed, this));
     }
   catch (OAuthException &e)
     {
-      on_oauth_result(false, e.details());
+      failed_cb();
     }
 }
