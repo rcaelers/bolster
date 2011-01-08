@@ -400,7 +400,7 @@ OAuth::request_temporary_credentials()
     {
       int port;
       string path = "/oauth-verfied";
-      backend->listen(boost::bind(&OAuth::ready_resource_owner_authorization, this, _1, _2, _3, _4, _5),
+      backend->listen(boost::bind(&OAuth::on_resource_owner_authorization_ready, this, _1, _2, _3, _4, _5),
                       path, port);
 
       stringstream ss;
@@ -413,7 +413,7 @@ OAuth::request_temporary_credentials()
       string oauth_header = create_oauth_header(http_method, temporary_request_uri, parameters);
 
       backend->request(http_method, temporary_request_uri, "", oauth_header,
-                       boost::bind(&OAuth::ready_temporary_credentials, this, _1, _2));
+                       boost::bind(&OAuth::on_temporary_credentials_ready, this, _1, _2));
     }
   catch(OAuthException &oe)
     {
@@ -427,7 +427,7 @@ OAuth::request_temporary_credentials()
 
 
 void
-OAuth::ready_temporary_credentials(int status, const string &response)
+OAuth::on_temporary_credentials_ready(int status, const string &response)
 {
   try
     {
@@ -502,8 +502,8 @@ OAuth::request_resource_owner_authorization()
 
 
 void
-OAuth::ready_resource_owner_authorization(const string &method, const string &query, const string &body,
-                                          string &response_content_type, string &response_body)
+OAuth::on_resource_owner_authorization_ready(const string &method, const string &query, const string &body,
+                                             string &response_content_type, string &response_body)
 {
   (void) body;
 
@@ -566,7 +566,7 @@ OAuth::request_token(const string &token, const string &verifier)
       string oauth_header = create_oauth_header(http_method, token_request_uri, parameters);
 
       backend->request(http_method, token_request_uri, "", oauth_header,
-                       boost::bind(&OAuth::ready_token, this, _1, _2));
+                       boost::bind(&OAuth::on_token_ready, this, _1, _2));
     }
   catch(WebBackendException &we)
     {
@@ -580,7 +580,7 @@ OAuth::request_token(const string &token, const string &verifier)
 }
 
 void
-OAuth::ready_token(int status, const string &response)
+OAuth::on_token_ready(int status, const string &response)
 {
   try
     {

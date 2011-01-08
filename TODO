@@ -6,7 +6,7 @@
 ** DONE [#B] Add Exception handling
 ** DONE [#C] Remove libcrypto++
 ** TODO [#A] Check for memory leaks (valgrind)
-** TODO [#C] Rename all callback functions to 'on_*'
+** DONE [#C] Rename all callback functions to 'on_*'
 ** TODO [#C] Use uniform callback style.
 
 * DBus

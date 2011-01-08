@@ -73,10 +73,11 @@ private:
   void request_temporary_credentials();
   void request_resource_owner_authorization();
   void request_token(const std::string &token, const std::string &verifier);
-  void ready_temporary_credentials(int status, const std::string &response);
-  void ready_resource_owner_authorization(const std::string &method, const std::string &query, const std::string &body,
-                                          std::string &response_content_type, std::string &response_body);
-  void ready_token(int status, const std::string &response);
+
+  void on_temporary_credentials_ready(int status, const std::string &response);
+  void on_resource_owner_authorization_ready(const std::string &method, const std::string &query, const std::string &body,
+                                             std::string &response_content_type, std::string &response_body);
+  void on_token_ready(int status, const std::string &response);
 
 private:  
   IWebBackend *backend;
