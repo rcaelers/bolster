@@ -21,14 +21,28 @@
 
 #include <string>
 #include <gio/gio.h>
+#include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include "CouchDB.hh"
-
-namespace Secrets {
-class Secrets;
-}
-
+#include "Secrets.hh"
+#include "GDBusWrapper.hh"
 #include "Exception.hh"
+
+class DesktopCouchDBus : public DBusObject
+{
+public:
+  typedef boost::shared_ptr<DesktopCouchDBus> Ptr;
+  typedef boost::function<void (int) > GetPortCallback;
+
+public:
+  DesktopCouchDBus();
+
+  void get_port(GetPortCallback callback);
+
+private:
+  void on_get_port_reply(GVariant *var, GError *error, GetPortCallback callback); 
+};
 
 class DesktopCouch : public CouchDB
 {
@@ -39,16 +53,17 @@ public:
   void init();
   
 private:
+  void init_port();
   void init_secrets();
-  void init_dbus();
 
   void check_readiness();
   
   void on_secret_success(const std::string &secret);
   void on_secret_failed();
-  void on_port(GVariant *var, GError *error, GDBusProxy *proxy); 
- 
-  Secrets::Secrets *secrets;
+  void on_port(int port); 
+
+  DesktopCouchDBus::Ptr couch_dbus;
+  Secrets::Secrets::Ptr secrets;
   int couch_port;
 };
   

@@ -40,7 +40,6 @@ using namespace std;
 
 DesktopCouch::DesktopCouch()
   : CouchDB(),
-    secrets(NULL),
     couch_port(0)
 {
 }
@@ -48,10 +47,6 @@ DesktopCouch::DesktopCouch()
 
 DesktopCouch::~DesktopCouch()
 {
-  if (secrets != NULL)
-    {
-      delete secrets;
-    }
 }
 
 
@@ -60,55 +55,30 @@ DesktopCouch::init()
 {
   CouchDB::init();
   
-  init_dbus();
+  init_port();
   init_secrets();
 }
 
 
 void
-DesktopCouch::init_dbus()
+DesktopCouch::init_port()
 {
-  GError *error = NULL;
-  GDBusProxy *proxy = g_dbus_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION,
-                                                    G_DBUS_PROXY_FLAGS_NONE,
-                                                    NULL,
-                                                    "org.desktopcouch.CouchDB",
-                                                    "/",
-                                                    "org.desktopcouch.CouchDB",
-                                                    NULL,
-                                                    &error);
-  if (error != NULL)
-    {
-      g_debug("CouchDB DBUS not available %s", error->message);
-      g_error_free(error);
-    }
-
-  if (error == NULL && proxy != NULL)
-    {
-      GDBusMethodReply *w = new GDBusMethodReply(boost::bind(&DesktopCouch::on_port, this, _1, _2, proxy));
-      
-      g_dbus_proxy_call(proxy,
-                        "getPort",
-                        NULL,
-                        G_DBUS_CALL_FLAGS_NONE,
-                        -1,
-                        NULL,
-                        GDBusMethodReply::cb,
-                        w);
-    }
+  couch_dbus = DesktopCouchDBus::Ptr(new DesktopCouchDBus());
+  couch_dbus->init();
+  couch_dbus->get_port(boost::bind(&DesktopCouch::on_port, this, _1));
 }
 
 void
 DesktopCouch::init_secrets()
 {
-  secrets = new Secrets::Secrets();
+  secrets = Secrets::Secrets::Ptr(new Secrets::Secrets());
 
   map<string, string> attributes;
   attributes["desktopcouch"] = "oauth";
   
-  secrets->init(attributes,
-                boost::bind(&DesktopCouch::on_secret_success, this, _1),
-                boost::bind(&DesktopCouch::on_secret_failed, this));
+  secrets->request_secret(attributes,
+                          boost::bind(&DesktopCouch::on_secret_success, this, _1),
+                          boost::bind(&DesktopCouch::on_secret_failed, this));
 }
 
   
@@ -135,15 +105,18 @@ DesktopCouch::on_secret_failed()
 }
 
 void
-DesktopCouch::on_port(GVariant *var, GError *error, GDBusProxy *proxy)
+DesktopCouch::on_port(int port)
 {
-  if (error == NULL && var != NULL)
+  if (port != 0)
     {
-      g_variant_get(var, "(i)", &couch_port);
-      g_debug("CouchDB is on port %d", couch_port);
+      g_debug("CouchDB is on port %d", port);
+      couch_port = port;
+    }
+  else
+    {
+      couch_dbus->get_port(boost::bind(&DesktopCouch::on_port, this, _1));
     }
 
-  g_object_unref(proxy);
   check_readiness();
 }
 
@@ -165,4 +138,40 @@ DesktopCouch::check_readiness()
 
       g_debug("all %s:", out.c_str());
     }
+}
+
+DesktopCouchDBus::DesktopCouchDBus()
+  : DBusObject("org.desktopcouch.CouchDB", "/", "org.desktopcouch.CouchDB")
+{
+}
+    
+
+void
+DesktopCouchDBus::get_port(GetPortCallback callback)
+{
+  GDBusMethodReply *w = new GDBusMethodReply(boost::bind(&DesktopCouchDBus::on_get_port_reply, this, _1, _2, callback));
+  
+  g_dbus_proxy_call(proxy,
+                    "getPort",
+                    NULL,
+                    G_DBUS_CALL_FLAGS_NONE,
+                    -1,
+                    NULL,
+                    GDBusMethodReply::cb,
+                    w);
+}
+
+
+void
+DesktopCouchDBus::on_get_port_reply(GVariant *var, GError *error, GetPortCallback callback)
+{
+  int port = 0;
+  
+  if (error == NULL && var != NULL)
+    {
+      g_variant_get(var, "(i)", &port);
+      g_debug("CouchDB is on port %d", port);
+    }
+
+  callback(port);
 }

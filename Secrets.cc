@@ -25,55 +25,37 @@
 #include <glib.h>
 #include "boost/bind.hpp"
 
-#include "OAuth.hh"
-#include "OAuthException.hh"
-#include "WebBackendSoup.hh"
-#include "WebBackendException.hh"
-#include "StringUtil.hh"
-
+#include "Exception.hh"
 
 using namespace std;
 
 Secrets::Secrets::Secrets()
-  : service(NULL),
-    session(NULL),
-    item(NULL)
 {
 }
 
 
 Secrets::Secrets::~Secrets()
 {
-  if (service != NULL)
-    {
-      delete service;
-    }
-
-  if (session != NULL)
-    {
-      delete session;
-    }
-
-  if (item != NULL)
-    {
-      delete item;
-    }
 }
 
 
 void
-Secrets::Secrets::init(const Attributes &attributes, SuccessCallback success_cb, FailedCallback failed_cb)
+Secrets::Secrets::request_secret(const Attributes &attributes, SuccessCallback success_cb, FailureCallback failure_cb)
 {
   try
     {
-      this->success_cb = success_cb;
-      this->failed_cb = failed_cb;
+      Request::Ptr request(new Request(success_cb, failure_cb));
 
-      service = new Service();
-      service->init();
-      
-      session = NULL;
-      service->open(&session);
+      if (!service)
+        {
+          service = Service::Ptr(new Service());
+          service->init();
+        }
+
+      if (!session)
+        {
+          service->open(session);
+        }
 
       ItemList locked_secrets;
       ItemList unlocked_secrets;
@@ -82,120 +64,40 @@ Secrets::Secrets::init(const Attributes &attributes, SuccessCallback success_cb,
       if (unlocked_secrets.size() == 0 && locked_secrets.size() > 0)
         {
           service->unlock(locked_secrets, unlocked_secrets,
-                          boost::bind(&Secrets::on_unlocked, this, _1));
+                          boost::bind(&Secrets::on_unlocked, this, request, _1));
         }
       
       if (unlocked_secrets.size() > 0)
         {
-          item = new Item(unlocked_secrets.front());
-          item->init();
-          
-          string secret = item->get_secret(session->get_path());
-          success_cb(secret);
-
-          service->lock(unlocked_secrets);
-          
-          session->close();
+          on_unlocked(request, unlocked_secrets);
         }
     }
   catch (Exception)
     {
-      failed_cb();
-      session->close();
+      failure_cb();
     }
 }
 
+
 void
-Secrets::Secrets::on_unlocked(const ItemList &unlocked_secrets)
+Secrets::Secrets::on_unlocked(Request::Ptr request, const ItemList &unlocked_secrets)
 {
   try
     {
-      item = new Item(unlocked_secrets.front());
+      Item::Ptr item(new Item(unlocked_secrets.front()));
       item->init();
           
       string secret = item->get_secret(session->get_path());
-      success_cb(secret);
-
-      session->close();
+      request->success()(secret);
     }
   catch (Exception)
     {
-      failed_cb();
-      session->close();
+      request->failure()();
     }
 }
 
 
 
-Secrets::DBusObject::DBusObject(const std::string &service_name, const std::string &object_path, const std::string &interface_name)
-  : service_name(service_name),
-    object_path(object_path),
-    interface_name(interface_name)
-{
-}
-
-
-Secrets::DBusObject::~DBusObject()
-{
-  if (proxy != NULL)
-    {
-      g_object_unref(proxy);
-    }
-}
-
-
-void
-Secrets::DBusObject::init()
-{
-  GError *error = NULL;
-  proxy = g_dbus_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION,
-                                        G_DBUS_PROXY_FLAGS_NONE,
-                                        NULL,
-                                        service_name.c_str(),
-                                        object_path.c_str(),
-                                        interface_name.c_str(),
-                                        NULL,
-                                        &error);
-  if (error != NULL)
-    {
-      string error_msg = error->message;
-      g_error_free(error);
-      throw Exception("Cannot open secrets: " + error_msg);
-    }
-
-  if (error == NULL && proxy != NULL)
-    {
-      g_signal_connect(proxy,
-                       "g-signal",
-                       G_CALLBACK(&DBusObject::on_signal_static),
-                       this);
-
-    }
-}
-
-
-void
-Secrets::DBusObject::on_signal_static(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters, gpointer user_data)
-{
-  DBusObject *obj = (DBusObject *)user_data;
-  obj->on_signal(proxy, sender_name, signal_name, parameters);
-  g_debug("on_signal static");
-
-}
-
-
-void
-Secrets::DBusObject::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters)
-{
-  (void) proxy;
-  (void) sender_name;
-  (void) signal_name;
-  (void) parameters;
-  g_debug("on_signal empty");
-
-}
-
-  
 Secrets::Service::Service()
   : DBusObject("org.freedesktop.secrets", "/org/freedesktop/secrets" , "org.freedesktop.Secret.Service") 
 {
@@ -203,7 +105,7 @@ Secrets::Service::Service()
 
 
 void
-Secrets::Service::open(Session **session)
+Secrets::Service::open(Session::Ptr &session)
 {
   GError *error = NULL;
   GVariant *result = g_dbus_proxy_call_sync(proxy,
@@ -227,8 +129,8 @@ Secrets::Service::open(Session **session)
   char *path = NULL;
   g_variant_get(result, "(vo)", &var, &path);
 
-  *session = new Session(path);
-  (*session)->init();
+  session = Session::Ptr(new Session(path));
+  session->init();
 
   g_variant_unref(result);
   g_variant_unref(var);
@@ -362,24 +264,6 @@ Secrets::Service::lock(const ItemList &unlocked)
       g_error_free(error);
       throw Exception("Cannot lock secrets: " + error_msg);
     }
-
-  GVariantIter *locked_iter = NULL;
-  char *prompt_path = NULL;
-  g_variant_get(result, "(aoo)", &locked_iter, &prompt_path);
-
-  char *path;
-  ItemList locked;
-  while (g_variant_iter_loop(locked_iter, "o", &path))
-    {
-      locked.push_back(path);
-    }
-
-  if (locked.size() == 0 && string(prompt_path) != "/")
-    {
-      // Prompt *p = new Prompt(prompt_path, callback);
-      // p->init();
-      // p->prompt();
-    }
   
   g_variant_unref(result);
 }
@@ -390,6 +274,18 @@ Secrets::Session::Session(const std::string &object_path)
 {
 }
 
+
+Secrets::Session::~Session()
+{
+  try
+    {
+      close();
+    }
+  catch(...)
+    {
+      // Ignore.
+    }
+}
 
 void
 Secrets::Session::close()
@@ -532,6 +428,3 @@ Secrets::Prompt::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_
       g_variant_unref(result);
     }
 }
-
-
-

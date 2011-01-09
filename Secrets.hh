@@ -24,6 +24,9 @@
 #include <map>
 #include <gio/gio.h>
 #include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
+
+#include "GDBusWrapper.hh"
 
 class OAuth;
 class IWebBackend;
@@ -33,34 +36,16 @@ namespace Secrets
   typedef std::map<std::string, std::string> Attributes;
   typedef std::list<std::string> ItemList;
 
+  typedef boost::function<void (const std::string&) > SuccessCallback;
+  typedef boost::function<void () > FailureCallback;
   typedef boost::function<void (const ItemList&) > UnlockedCallback;
 
   
-  class DBusObject
-  {
-  public:
-    DBusObject(const std::string &service_name, const std::string &object_path, const std::string &interface_name);
-    ~DBusObject();
-
-    virtual void init();
-    virtual void on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters);
-
-    std::string get_path() const { return object_path; }
-    
-  private:    
-    static void on_signal_static(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters, gpointer user_data);
-    
-  protected:
-    GDBusProxy *proxy;
-
-  private:
-    std::string service_name;
-    std::string object_path;
-    std::string interface_name;
-  };
-    
   class Item : public DBusObject
   {
+  public:
+    typedef boost::shared_ptr<Item> Ptr;
+    
   public:
     Item(const std::string &object_path);
 
@@ -71,6 +56,7 @@ namespace Secrets
   class Prompt : public DBusObject
   {
   public:
+    typedef boost::shared_ptr<Prompt> Ptr;
     
   public:
     Prompt(const std::string &object_path, UnlockedCallback callback);
@@ -87,7 +73,11 @@ namespace Secrets
   class Session : public DBusObject
   {
   public:
+    typedef boost::shared_ptr<Session> Ptr;
+
+  public:
     Session(const std::string &object_path);
+    ~Session();
 
     void close();
   };
@@ -95,35 +85,52 @@ namespace Secrets
   class Service : public DBusObject
   {
   public:
+    typedef boost::shared_ptr<Service> Ptr;
+
+  public:
     Service();
 
-    void open(Session **session);
+    void open(Session::Ptr &session);
     void search(const Attributes &attributes, ItemList &locked, ItemList &unlocked);
     void unlock(const ItemList &locked, ItemList &unlocked_secrets, UnlockedCallback callback);
     void lock(const ItemList &unlocked);
   };
-  
+
+
+  class Request
+  {
+  public:
+    typedef boost::shared_ptr<Request> Ptr;
+    
+    Request(SuccessCallback success_cb, FailureCallback failure_cb)
+      : success_cb(success_cb), failure_cb(failure_cb) {}
+
+    SuccessCallback success() const { return success_cb; }
+    FailureCallback failure() const { return failure_cb; }
+    
+  private:
+    SuccessCallback success_cb;
+    FailureCallback failure_cb;
+  };
+    
   class Secrets
   {
   public:
-    typedef boost::function<void (const std::string&) > SuccessCallback;
-    typedef boost::function<void () > FailedCallback;
-  
+    typedef boost::shared_ptr<Secrets> Ptr;
+
+  public:
     Secrets();
     virtual ~Secrets();
   
-    void init(const Attributes &attributes, SuccessCallback success_cb, FailedCallback failed_cb);
+    void request_secret(const Attributes &attributes, SuccessCallback success_cb, FailureCallback failure_cb);
 
   private:
-    void on_unlocked(const ItemList &unlocked_secrets);
-
+    void on_unlocked(Request::Ptr request, const ItemList &unlocked_secrets);
+    void close();
+    
   private:
-    SuccessCallback success_cb;
-    FailedCallback failed_cb;
-
-    Service *service;
-    Session *session;
-    Item *item;
+    Service::Ptr service;
+    Session::Ptr session;
   };
 }
 #endif

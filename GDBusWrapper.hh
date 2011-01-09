@@ -30,6 +30,33 @@ class IWebBackend;
 
 #include "Exception.hh"
 
+class DBusObject
+{
+public:
+  DBusObject(const std::string &service_name, const std::string &object_path, const std::string &interface_name);
+  ~DBusObject();
+
+  virtual void init();
+  virtual void on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters);
+
+  std::string get_path() const { return object_path; }
+    
+private:    
+  //typedef boost::function<void (GVariant *, GError *) > MethodCallback;
+
+  static void on_signal_static(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters, gpointer user_data);
+  // static void on_method_reply_static(GObject *source_object, GAsyncResult *res, gpointer user_data)
+    
+protected:
+  GDBusProxy *proxy;
+
+private:
+  std::string service_name;
+  std::string object_path;
+  std::string interface_name;
+};
+    
+
 class GDBusMethodReply : boost::noncopyable
 {
 public:
@@ -65,12 +92,15 @@ private:
   void ref()
   {
     count++;
+    g_debug("ref method wrapper cnt = %d", count);
   }
 
   void unref()
   {
+    g_debug("unref method wrapper cnt = %d", count);
     if (--count == 0)
       {
+        g_debug("unref method wrapper delete");
         delete this;
       }
   }
