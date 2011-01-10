@@ -92,15 +92,12 @@ private:
   void ref()
   {
     count++;
-    g_debug("ref method wrapper cnt = %d", count);
   }
 
   void unref()
   {
-    g_debug("unref method wrapper cnt = %d", count);
     if (--count == 0)
       {
-        g_debug("unref method wrapper delete");
         delete this;
       }
   }

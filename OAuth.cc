@@ -363,8 +363,8 @@ OAuth::create_oauth_header(const string &http_method,
                                    escape_uri(normalized_parameters)
                                    );
 
-  g_debug("BASE %s", signature_base_string.c_str());
-  g_debug("KEY %s", key.c_str());
+  // g_debug("BASE %s", signature_base_string.c_str());
+  // g_debug("KEY %s", key.c_str());
   
   string signature = encrypt(signature_base_string, key);
 
