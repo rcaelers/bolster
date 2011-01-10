@@ -133,10 +133,7 @@ DesktopCouch::check_readiness()
 
       couch_uri = ss.str();
 
-      string out;
-      oauth->request("GET", couch_uri + "_all_dbs", "", out);
-
-      g_debug("all %s:", out.c_str());
+      complete();
     }
 }
 
@@ -170,7 +167,6 @@ DesktopCouchDBus::on_get_port_reply(GVariant *var, GError *error, GetPortCallbac
   if (error == NULL && var != NULL)
     {
       g_variant_get(var, "(i)", &port);
-      g_debug("CouchDB is on port %d", port);
     }
 
   callback(port);

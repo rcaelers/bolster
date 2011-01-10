@@ -34,6 +34,9 @@ public:
 
 private:
   void init_oauth();
+
+protected:
+  void complete();
   
 protected:
   std::string couch_uri;
