@@ -34,12 +34,18 @@ include_directories(
     ${JASON_INCLUDE_DIRS}
 )
 
+set(ALLLIBS ${GLIB_LIBRARIES} ${LIBGCRYPT_LIBS} ${SOUP_LIBRARIES} ${KEYRING_LIBRARIES} ${JASON_LIBRARIES})
+
 add_definitions(-W -Wall -Wextra -g -O0)
-add_executable(oauth WebBackendSoup.cc OAuth.cc UbuntuOneSSO.cc Secrets.cc CouchDB.cc DesktopCouch.cc UbuntuOneCouch.cc StringUtil.cc GDBusWrapper.cc main.cc)
-target_link_libraries(oauth ${GLIB_LIBRARIES} ${LIBGCRYPT_LIBS} ${SOUP_LIBRARIES} ${KEYRING_LIBRARIES} ${JASON_LIBRARIES})
+add_executable(oauth WebBackendSoup.cc OAuth.cc UbuntuOneSSO.cc Secrets.cc CouchDB.cc DesktopCouch.cc UbuntuOneCouch.cc StringUtil.cc GDBusWrapper.cc Json.cc main.cc)
+target_link_libraries(oauth ${ALLLIBS})
 
 add_definitions(-DHAVE_CONFIG_H=1)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
+
+add_executable(test test/main.cc test/json.cc Json.cc StringUtil.cc)
+target_link_libraries(test ${ALLLIBS})
+set_target_properties(test PROPERTIES COMPILE_FLAGS -I..)
 
 # for including config.h
 include_directories(${CMAKE_BINARY_DIR})
