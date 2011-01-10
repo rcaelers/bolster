@@ -113,6 +113,8 @@ UbuntuOneCouch::on_pairing_success(const string &consumer_key, const string &con
   string out;
   oauth->request("GET", couch_uri + "contacts", "", out);
   g_debug("all %s:", out.c_str());
+
+  complete();
   
   g_object_unref(G_OBJECT(parser));
 }
@@ -121,6 +123,3 @@ void
 UbuntuOneCouch::on_pairing_failed()
 {
 }
-
-
-
