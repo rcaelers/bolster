@@ -19,33 +19,12 @@ elseif (Libgcrypt_FIND_REQUIRED)
    message(FATAL_ERROR "Could not find Libgcrypt")
 endif (LIBGCRYPT_LIBS)
 
-
-link_directories(
-    ${GLIB_LIBRARY_DIRS}
-    ${SOUP_LIBRARY_DIRS}
-    ${KEYRING_LIBRARY_DIRS}
-    ${JASON_LIBRARY_DIRS}
-)
-
-include_directories(
-    ${GLIB_INCLUDE_DIRS}
-    ${SOUP_INCLUDE_DIRS}
-    ${KEYRING_INCLUDE_DIRS}
-    ${JASON_INCLUDE_DIRS}
-)
-
 set(ALLLIBS ${GLIB_LIBRARIES} ${LIBGCRYPT_LIBS} ${SOUP_LIBRARIES} ${KEYRING_LIBRARIES} ${JASON_LIBRARIES})
 
-add_definitions(-W -Wall -Wextra -g -O0)
-add_executable(oauth WebBackendSoup.cc OAuth.cc UbuntuOneSSO.cc Secrets.cc CouchDB.cc DesktopCouch.cc UbuntuOneCouch.cc StringUtil.cc GDBusWrapper.cc Json.cc main.cc)
-target_link_libraries(oauth ${ALLLIBS})
-
-add_definitions(-DHAVE_CONFIG_H=1)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 
-add_executable(test test/main.cc test/json.cc Json.cc StringUtil.cc)
-target_link_libraries(test ${ALLLIBS})
-set_target_properties(test PROPERTIES COMPILE_FLAGS -I..)
+set (LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR})
+link_directories(${LIBRARY_OUTPUT_PATH})
 
-# for including config.h
-include_directories(${CMAKE_BINARY_DIR})
+add_subdirectory(src)
+add_subdirectory(test)

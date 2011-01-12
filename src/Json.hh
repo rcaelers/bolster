@@ -20,20 +20,31 @@
 #define JSON_HH
 
 #include <string>
+#include <list>
 #include <json-glib/json-glib.h>
 
 class Json
 {
 public:
+  enum Type { Object, Array, String, Int, Bool, None };
+  
+public:
  	Json(const std::string &json);
   virtual ~Json();
 
-  std::string get_string_value(const std::string &path);
-  int get_int_value(const std::string &path);
-  bool get_bool_value(const std::string &path);
+  
+  bool exists(const std::string &path) const;
+  
+  Type get_type(const std::string &path) const;
+  int get_array_size(const std::string &path) const;
+  void get_members(const std::string &path, std::list<std::string> &result) const;
+  
+  std::string get_string(const std::string &path) const;
+  int get_int(const std::string &path) const;
+  bool get_bool(const std::string &path) const;
 
 private:
-  JsonNode *get_node(const std::string &path);
+  JsonNode *get_node(const std::string &path) const;
 
 private:
   JsonParser *parser;

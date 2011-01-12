@@ -70,9 +70,8 @@ Json::~Json()
 }
 
 
-
 JsonNode *
-Json::get_node(const string &path)
+Json::get_node(const string &path) const
 {
   vector<string> elements;
   StringUtil::split(path, '.', elements);
@@ -144,12 +143,130 @@ Json::get_node(const string &path)
         }
     }
 
+  g_assert(node != NULL);
+  
   return node;
 }
 
 
+bool
+Json::exists(const string &path) const
+{
+  try
+    {
+      return get_node(path) != NULL;
+    }
+  catch(...)
+    {
+    }
+  return false;
+}
+
+
+Json::Type
+Json::get_type(const string &path) const
+{
+  Type ret = Json::None;
+  
+  JsonNode *node = get_node(path);
+  
+  switch(json_node_get_node_type(node))
+    {
+    case JSON_NODE_OBJECT:
+      ret = Json::Object;
+      break;
+          
+    case JSON_NODE_ARRAY:
+      ret = Json::Array;
+      break;
+          
+    case JSON_NODE_VALUE:
+      {
+        GValue value = {0,};
+        json_node_get_value(node, &value);
+          
+        switch (G_VALUE_TYPE(&value))
+          {
+          case G_TYPE_BOOLEAN:
+            ret = Json::Bool;
+            break;
+          case G_TYPE_STRING:
+            ret = Json::String;
+            break;
+          case G_TYPE_INT64:
+            ret = Json::Int;
+            break;
+
+          default:
+            break;
+          }
+      }
+      break;
+      
+    default:
+    case JSON_NODE_NULL:
+      ret = Json::None;
+      break;
+    }
+
+  return ret;
+}
+
+
+int
+Json::get_array_size(const std::string &path) const
+{
+  int ret = 0;
+  JsonNode *node = get_node(path);
+  
+  if (json_node_get_node_type(node) == JSON_NODE_ARRAY)
+    {
+      JsonArray *array = json_node_get_array(node);
+      if (array == NULL)
+        {
+          throw JsonException("Invalid Json");
+        }
+
+      ret =  json_array_get_length(array);
+    }
+  else
+    {
+      throw JsonException("Path " + path + " is not an array");
+    }
+
+  return ret;
+}
+
+
+void
+Json::get_members(const std::string &path, std::list<std::string> &result) const
+{
+  JsonNode *node = get_node(path);
+  
+  if (json_node_get_node_type(node) == JSON_NODE_OBJECT)
+    {
+      JsonObject *obj = json_node_get_object(node);
+      if (obj == NULL)
+        {
+          throw JsonException("Invalid Json");
+        }
+      
+      GList *members = json_object_get_members(obj);
+      while (members)
+        {
+          result.push_back(string((char *)members->data));
+          members = members->next;
+        }
+    }
+  else
+    {
+      throw JsonException("Path " + path + " is not an object");
+    }
+}
+
+
 string
-Json::get_string_value(const string &path)
+Json::get_string(const string &path) const
 {
   string ret;
   JsonNode *node = get_node(path);
@@ -159,7 +276,7 @@ Json::get_string_value(const string &path)
       throw JsonException("Path " +  path + " does not exist");
     }
 
-  GValue value = { 0, };
+  GValue value = {0};
   json_node_get_value(node, &value);
 
   if (G_VALUE_TYPE(&value) == G_TYPE_STRING)
@@ -176,8 +293,9 @@ Json::get_string_value(const string &path)
   return ret;
 }
 
+
 int
-Json::get_int_value(const string &path)
+Json::get_int(const string &path) const
 {
   int ret;
   JsonNode *node = get_node(path);
@@ -187,7 +305,7 @@ Json::get_int_value(const string &path)
       throw JsonException("Path " +  path + " does not exist");
     }
 
-  GValue value = { 0,  };
+  GValue value = {0,};
   json_node_get_value(node, &value);
 
   if (G_VALUE_TYPE(&value) == G_TYPE_INT64)
@@ -204,8 +322,9 @@ Json::get_int_value(const string &path)
   return ret;
 }
 
+
 bool
-Json::get_bool_value(const string &path)
+Json::get_bool(const string &path) const
 {
   bool ret;
   JsonNode *node = get_node(path);
@@ -215,7 +334,7 @@ Json::get_bool_value(const string &path)
       throw JsonException("Path " +  path + " does not exist");
     }
 
-  GValue value = { 0,  };
+  GValue value = {0,};
   json_node_get_value(node, &value);
 
   if (G_VALUE_TYPE(&value) == G_TYPE_BOOLEAN)
