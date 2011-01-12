@@ -184,7 +184,7 @@ WebBackendSoup::create_soup_message(const string &http_method,
   SoupMessage *message = soup_message_new(http_method.c_str(), uri.c_str());
   if (message == NULL)
     {
-      throw WebBackendException("Cannot create HTTP request.");
+      throw WebBackendException("Cannot create HTTP request: " + http_method + " " + uri);
     }
 
   if (body != "")

@@ -20,21 +20,33 @@
 #define COUCHDB_HH
 
 #include <string>
+#include <boost/signals2.hpp>
 
 class OAuth;
 class IWebBackend;
 
 class CouchDB
 {
+  
 public:
  	CouchDB();
   virtual ~CouchDB();
   
   virtual void init();
 
+  boost::signals2::signal<void ()> signal_ready;
+  boost::signals2::signal<void ()> signal_failed;
+
+  int request(const std::string &http_method,
+              const std::string &uri,
+              const std::string &body,
+              std::string &response_body);
+  
 private:
   void init_oauth();
-
+  bool is_ready() const;
+  std::string get_couch_uri() const;
+  
 protected:
   void complete();
   
@@ -42,6 +54,9 @@ protected:
   std::string couch_uri;
   OAuth *oauth;
   IWebBackend *backend;
+
+private:
+  bool ready;
 };
   
 #endif
