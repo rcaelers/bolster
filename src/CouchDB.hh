@@ -35,20 +35,22 @@ public:
   virtual void init();
 
   boost::signals2::signal<void ()> signal_ready;
-  boost::signals2::signal<void ()> signal_failed;
+  boost::signals2::signal<void ()> signal_failure;
 
   int request(const std::string &http_method,
               const std::string &uri,
               const std::string &body,
               std::string &response_body);
-  
-private:
-  void init_oauth();
+
   bool is_ready() const;
   std::string get_couch_uri() const;
   
+private:
+  void init_oauth();
+  
 protected:
   void complete();
+  void failure();
   
 protected:
   std::string couch_uri;

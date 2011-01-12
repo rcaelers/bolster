@@ -80,14 +80,16 @@ UbuntuOneCouch::on_pairing_success(const string &consumer_key, const string &con
   g_debug("response: %d %s", resp, response.c_str());
 
 	GError *error;
-	JsonParser *parser = json_parser_new ();
+	JsonParser *parser = json_parser_new();
 
+  couch_uri = "";
   if (!json_parser_load_from_data(parser, response.c_str(), response.length(), &error))
     {
       g_error_free(error);
     }
   else
     {
+      // TODO: rewrite using Json class
       JsonNode *root_node = json_parser_get_root(parser);
 
       if (json_node_get_node_type(root_node) == JSON_NODE_OBJECT)
@@ -110,11 +112,14 @@ UbuntuOneCouch::on_pairing_success(const string &consumer_key, const string &con
         }
     }
 
-  string out;
-  oauth->request("GET", couch_uri + "contacts", "", out);
-  g_debug("all %s:", out.c_str());
-
-  complete();
+  if (couch_uri != "")
+    {
+      complete();
+    }
+  else
+    {
+      failure();
+    }
   
   g_object_unref(G_OBJECT(parser));
 }
@@ -122,4 +127,5 @@ UbuntuOneCouch::on_pairing_success(const string &consumer_key, const string &con
 void
 UbuntuOneCouch::on_pairing_failed()
 {
+  failure();
 }

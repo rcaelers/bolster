@@ -68,6 +68,7 @@ DesktopCouch::init_port()
   couch_dbus->get_port(boost::bind(&DesktopCouch::on_port, this, _1));
 }
 
+
 void
 DesktopCouch::init_secrets()
 {
@@ -102,7 +103,9 @@ DesktopCouch::on_secret_success(const string &secret)
 void
 DesktopCouch::on_secret_failed()
 {
+  failure();
 }
+
 
 void
 DesktopCouch::on_port(int port)
@@ -114,7 +117,9 @@ DesktopCouch::on_port(int port)
     }
   else
     {
+      // FIXME: workaround for intermittent problems with DesktoCouch DBUS service
       couch_dbus->get_port(boost::bind(&DesktopCouch::on_port, this, _1));
+      // FIXME: should do: failure();
     }
 
   check_readiness();

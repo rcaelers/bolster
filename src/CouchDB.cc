@@ -94,6 +94,15 @@ CouchDB::complete()
 }
 
 
+void
+CouchDB::failure()
+{
+  ready = false;
+  couch_uri = "";
+  signal_failure();
+}
+
+
 bool
 CouchDB::is_ready() const
 {
