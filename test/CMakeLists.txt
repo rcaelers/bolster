@@ -1,6 +1,5 @@
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_BINARY_DIR}
     ${GLIB_INCLUDE_DIRS}
     ${SOUP_INCLUDE_DIRS}
@@ -15,7 +14,7 @@ add_definitions(-DHAVE_CONFIG_H=1)
 
 add_executable(test tests.cc JsonTests.cc CouchDBTests.cc)
 target_link_libraries(test ${ALLLIBS} couch)
-#set_target_properties(test PROPERTIES COMPILE_FLAGS -I..)
+set_target_properties(test PROPERTIES COMPILE_FLAGS -I${CMAKE_SOURCE_DIR}/src)
 
 add_executable(couch_test main.cc)
 target_link_libraries(couch_test ${ALLLIBS} couch)

@@ -44,6 +44,8 @@ CouchDB::CouchDB()
 
 CouchDB::~CouchDB()
 {
+  signal_ready.disconnect_all_slots();
+  signal_failure.disconnect_all_slots();
   if (oauth != NULL)
     {
       delete oauth;

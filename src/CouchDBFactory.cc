@@ -16,48 +16,26 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef COUCHDB_HH
-#define COUCHDB_HH
-
-#include <string>
-#include <boost/signals2.hpp>
-
-#include "ICouchDB.hh"
-
-class OAuth;
-class IWebBackend;
-
-class CouchDB : public ICouchDB
-{
-  
-public:
- 	CouchDB();
-  virtual ~CouchDB();
-  
-  virtual void init();
-
-  int request(const std::string &http_method,
-              const std::string &uri,
-              const std::string &body,
-              std::string &response_body);
-
-  bool is_ready() const;
-  std::string get_couch_uri() const;
-  
-private:
-  void init_oauth();
-  
-protected:
-  void complete();
-  void failure();
-  
-protected:
-  std::string couch_uri;
-  OAuth *oauth;
-  IWebBackend *backend;
-
-private:
-  bool ready;
-};
-  
+#ifdef HAVE_CONFIG_H
+#include "config.h"
 #endif
+
+#include "CouchDBFactory.hh"
+
+#include "DesktopCouch.hh"
+#include "UbuntuOneCouch.hh"
+
+ICouchDB *
+CouchDBFactory::create(Type type)
+{
+  switch(type)
+    {
+    case Desktop:
+      return new DesktopCouch();
+      break;
+      
+    case UbuntuOne:
+      return new UbuntuOneCouch();
+      break;
+    }
+}

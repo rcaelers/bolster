@@ -16,48 +16,29 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef COUCHDB_HH
-#define COUCHDB_HH
+#ifndef ICOUCHDB_HH
+#define ICOUCHDB_HH
 
 #include <string>
 #include <boost/signals2.hpp>
 
-#include "ICouchDB.hh"
-
-class OAuth;
-class IWebBackend;
-
-class CouchDB : public ICouchDB
+class ICouchDB
 {
-  
 public:
- 	CouchDB();
-  virtual ~CouchDB();
+  virtual ~ICouchDB() {}
   
-  virtual void init();
+  virtual void init() = 0;
+  virtual int request(const std::string &http_method,
+                      const std::string &uri,
+                      const std::string &body,
+                      std::string &response_body) = 0;
 
-  int request(const std::string &http_method,
-              const std::string &uri,
-              const std::string &body,
-              std::string &response_body);
+  // FIXME: Somehow move these to CouchDB class
+  boost::signals2::signal<void ()> signal_ready;
+  boost::signals2::signal<void ()> signal_failure;
 
-  bool is_ready() const;
-  std::string get_couch_uri() const;
-  
-private:
-  void init_oauth();
-  
-protected:
-  void complete();
-  void failure();
-  
-protected:
-  std::string couch_uri;
-  OAuth *oauth;
-  IWebBackend *backend;
-
-private:
-  bool ready;
+  virtual bool is_ready() const = 0;
+  virtual std::string get_couch_uri() const = 0;
 };
   
 #endif

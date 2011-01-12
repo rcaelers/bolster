@@ -6,15 +6,15 @@
 #include <string>
 #include <iostream>
 
-#include "UbuntuOneCouch.hh"
-#include "DesktopCouch.hh"
+#include "ICouchDB.hh"
+#include "CouchDBFactory.hh"
 #include "Json.hh"
 
 using namespace std;
 
 static GMainLoop *loop = NULL;
 
-void run(CouchDB *couch)
+void run(ICouchDB *couch)
 {
   string in;
   string out;
@@ -123,9 +123,9 @@ int main(int argc, char **argv)
   // web->init("Hello", "World", parameters, &result);
   
   // UbuntuOneCouch c;
-  DesktopCouch c;
-  c.signal_ready.connect(boost::bind(run, &c));
-  c.init();
+  ICouchDB *c = CouchDBFactory::create(CouchDBFactory::Desktop);
+  c->signal_ready.connect(boost::bind(run, c));
+  c->init();
 
   g_main_loop_run(loop);
   g_main_loop_unref(loop);

@@ -37,7 +37,6 @@ public:
 
 public:
   DesktopCouchDBus();
-
   void get_port(GetPortCallback callback);
 
 private:
