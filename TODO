@@ -8,11 +8,12 @@
 ** TODO [#A] Check for memory leaks (valgrind)
 ** DONE [#C] Rename all callback functions to 'on_*'
 ** DONE [#C] Use uniform callback style.
+** TODO [#B] Handle/Report (DBus/SSO/OAuth/Couch) failures better
 
 * DBus
 
 ** TODO [#C] Make all calls async
-** TODO [#C] Create wrapper for signals
+** DONE [#C] Create wrapper for signals
 
 * OAuth
 
@@ -37,9 +38,9 @@
 
 * Couch
 
-** TODO [#B] Add support for CouchDB*
+** TODO [#B] Add support for CouchDB
 ** DONE [#B] Add support for desktop CouchDB
-** TODO [#C] Add support for Ubuntu One CouchDB
+** DONE [#C] Add support for Ubuntu One CouchDB
 
 * UbuntuSSO
 
