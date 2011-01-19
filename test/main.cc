@@ -100,6 +100,9 @@ void run(ICouchDB *couch)
 
   couch->request("GET", "/test2/foo?rev="+ crev, "", out);
   g_debug("Get2 %s", out.c_str());
+
+  g_main_loop_quit(loop);
+
 }
 
 int main(int argc, char **argv)
@@ -109,7 +112,6 @@ int main(int argc, char **argv)
 
   g_type_init();
 
-  loop = g_main_loop_new(NULL, TRUE);
 
   // IWebBackend *backend = new WebBackendSoup();
   // web = new OAuth(backend,
@@ -121,12 +123,19 @@ int main(int argc, char **argv)
   // 
   // OAuth::RequestParams parameters;
   // web->init("Hello", "World", parameters, &result);
-  
-  // UbuntuOneCouch c;
-  ICouchDB *c = CouchDBFactory::create(CouchDBFactory::Desktop);
-  c->signal_ready.connect(boost::bind(run, c));
-  c->init();
 
-  g_main_loop_run(loop);
-  g_main_loop_unref(loop);
+  for (int i = 0; i < 1000; i ++)
+    {
+      loop = g_main_loop_new(NULL, TRUE);
+      
+      // UbuntuOneCouch c;
+      ICouchDB *c = CouchDBFactory::create(CouchDBFactory::Desktop);
+      c->signal_ready.connect(boost::bind(run, c));
+      c->init();
+      
+      g_main_loop_run(loop);
+      g_main_loop_unref(loop);
+      
+      delete c;
+    }
 }

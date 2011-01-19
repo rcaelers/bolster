@@ -170,14 +170,22 @@ OAuth::get_nonce() const
 const string
 OAuth::escape_uri(const string &uri) const
 {
-  return g_uri_escape_string(uri.c_str(), NULL, TRUE);
+  string ret;
+  char *s = g_uri_escape_string(uri.c_str(), NULL, TRUE);
+  ret = s;
+  g_free(s);
+  return ret;
 }
 
 
 const string
 OAuth::unescape_uri(const string &uri) const
 {
-  return g_uri_unescape_string(uri.c_str(), NULL);
+  string ret;
+  char *s = g_uri_unescape_string(uri.c_str(), NULL);
+  ret = s;
+  g_free(s);
+  return ret;
 }
 
 
@@ -212,6 +220,7 @@ OAuth::normalize_uri(const string &uri, RequestParams &parameters) const
       char *new_uri = soup_uri_to_string(u, FALSE);
       ret = new_uri;
       g_free(new_uri);
+      soup_uri_free(u);
     }
  
   return ret;
@@ -316,10 +325,11 @@ OAuth::encrypt(const string &input, const string &key) const
       gcry_md_write(hd, input.c_str(), input.length());
 
       size_t digest_length = gcry_md_get_algo_dlen(GCRY_MD_SHA1);
-      const guchar *digest = (const guchar *)gcry_md_read(hd, 0);
-      const gchar *digest64 = g_base64_encode(digest, digest_length);
+      guchar *digest = (guchar *)gcry_md_read(hd, 0);
+      gchar *digest64 = g_base64_encode(digest, digest_length);
  
       ret = digest64;
+      g_free(digest64);
     }
   catch (OAuthException &e)
     {
