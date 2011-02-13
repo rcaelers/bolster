@@ -1,6 +1,5 @@
-// StringUtil.hh --- General purpose string utility functions
 //
-// Copyright (C) 2007, 2010, 2011 Rob Caelers & Raymond Penners
+// Copyright (C) 2010, 2011 Rob Caelers <robc@krandor.nl>
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,20 +16,39 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef STRINGUTIL_HH
-#define STRINGUTIL_HH
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-#include <string>
-#include <vector>
+#include <sstream>
 
-class StringUtil
+#include "Settings.hh"
+
+#include "ICouchDB.hh"
+#include "Json.hh"
+
+using namespace std;
+
+REGISTER_DOCUMENT_TYPE(Settings, "http://workrave.org/settings")
+
+Settings::Settings()
 {
-public:
-  static void split(const std::string &in, const char delim, std::vector<std::string> &result);
-  static std::string join(const std::vector<std::string> &parts, std::string separator);
-  static std::string search_replace(const std::string &in, const std::string &search, const std::string &replace);
-  static const std::string escape(const std::string &in);
-  static const std::string unescape(const std::string &in);
-};
+  // FIXME: duplication
+  set_type("http://workrave.org/settings"); 
+}
 
-#endif // STRINGUTIL_HH
+Settings::~Settings()
+{
+}
+
+void
+Settings::get_value(const std::string &key, std::string &value) const
+{
+  value = json->get_string(key);
+}
+
+void
+Settings::set_value(const std::string &key, const std::string &value)
+{
+  json->set_string(key, value);
+}

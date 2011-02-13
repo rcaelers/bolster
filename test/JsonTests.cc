@@ -210,12 +210,12 @@ BOOST_AUTO_TEST_CASE(json_invalid_path)
 
       Json j(json1);
 
-      BOOST_CHECK_THROW(j.get_string("a.z"), JsonException);
-      BOOST_CHECK_THROW(j.get_string("a.0"), JsonException);
-      BOOST_CHECK_THROW(j.get_string("firstName.x"), JsonException);
-      BOOST_CHECK_THROW(j.get_string("phoneNumber.2.type"), JsonException);
-      BOOST_CHECK_THROW(j.get_string("phoneNumber.x.type"), JsonException);
-      BOOST_CHECK_THROW(j.get_string("firstName.x"), JsonException);
+      BOOST_CHECK_EQUAL("", j.get_string("a.z"));
+      BOOST_CHECK_EQUAL("", j.get_string("a.0"));
+      BOOST_CHECK_EQUAL("", j.get_string("firstName.x"));
+      BOOST_CHECK_EQUAL("", j.get_string("phoneNumber.2.type"));
+      BOOST_CHECK_EQUAL("", j.get_string("phoneNumber.x.type"));
+      BOOST_CHECK_EQUAL("", j.get_string("firstName.x"));
     }
   catch(Exception &e)
     {
@@ -231,12 +231,12 @@ BOOST_AUTO_TEST_CASE(json_invalid_type)
 
       Json j(json1);
 
-      BOOST_CHECK_THROW(j.get_int("firstName"), JsonException);
-      BOOST_CHECK_THROW(j.get_bool("address.city"), JsonException);
-      BOOST_CHECK_THROW(j.get_string("age"), JsonException);
-      BOOST_CHECK_THROW(j.get_bool("age"), JsonException);
-      BOOST_CHECK_THROW(j.get_string("phoneNumber.1.t"), JsonException);
-      BOOST_CHECK_THROW(j.get_int("phoneNumber.1.f"), JsonException);
+      BOOST_CHECK_EQUAL(0, j.get_int("firstName"));
+      BOOST_CHECK_EQUAL(false, j.get_bool("address.city"));
+      BOOST_CHECK_EQUAL("", j.get_string("age"));
+      BOOST_CHECK_EQUAL(false, j.get_bool("age"));
+      BOOST_CHECK_EQUAL("", j.get_string("phoneNumber.1.t"));
+      BOOST_CHECK_EQUAL(0, j.get_int("phoneNumber.1.f"));
     }
   catch(Exception &e)
     {
@@ -244,6 +244,32 @@ BOOST_AUTO_TEST_CASE(json_invalid_type)
     }
 }
 
-// BOOST_CHECK_THROW
+BOOST_AUTO_TEST_CASE(json_set_strings)
+{
+  try
+    {
+      g_type_init();
+
+      Json j(json1);
+
+      j.set_string("gender", "male");
+      BOOST_CHECK_EQUAL("male", j.get_string("gender"));
+
+      BOOST_CHECK_EQUAL(j.get_string("phoneNumber.2.mobile"), "");
+      j.set_string("phoneNumber.*.mobile", "1234");
+      BOOST_CHECK_EQUAL("1234", j.get_string("phoneNumber.2.mobile"));
+
+      j.set_string("phoneNumber.1.foo", "14");
+      BOOST_CHECK_EQUAL("14", j.get_string("phoneNumber.1.foo"));
+
+      j.set_string("a.b.c.x.y.z", "1234");
+      BOOST_CHECK_EQUAL("1234", j.get_string("a.b.c.x.y.z"));
+    }
+  catch(Exception &e)
+    {
+      BOOST_FAIL("Exception: " + e.details());
+    }
+}
 
 BOOST_AUTO_TEST_SUITE_END()
+

@@ -1,6 +1,5 @@
-// StringUtil.hh --- General purpose string utility functions
 //
-// Copyright (C) 2007, 2010, 2011 Rob Caelers & Raymond Penners
+// Copyright (C) 2011 Rob Caelers <robc@krandor.nl>
 // All rights reserved.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,20 +16,36 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef STRINGUTIL_HH
-#define STRINGUTIL_HH
+#ifndef DATABASE_HH
+#define DATABASE_HH
 
 #include <string>
-#include <vector>
+#include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
 
-class StringUtil
+
+class ICouchDB;
+class Document;
+
+class Database
 {
 public:
-  static void split(const std::string &in, const char delim, std::vector<std::string> &result);
-  static std::string join(const std::vector<std::string> &parts, std::string separator);
-  static std::string search_replace(const std::string &in, const std::string &search, const std::string &replace);
-  static const std::string escape(const std::string &in);
-  static const std::string unescape(const std::string &in);
+  Database(ICouchDB *couch, const std::string &database_name);
+  virtual ~Database();
+
+  void create();
+  void destroy();
+  
+  void put(Document *doc);
+  void remove(Document *doc);
+  Document *get(const std::string id);
+
+  std::string get_database_name() const;
+  
+private:
+  std::string database_name;
+  ICouchDB *couch;
 };
 
-#endif // STRINGUTIL_HH
+  
+#endif

@@ -10,6 +10,10 @@
 ** DONE [#C] Use uniform callback style.
 ** TODO [#B] Handle/Report (DBus/SSO/OAuth/Couch) failures better
 
+* Json
+
+** TODO [#A] Rewrite - fix eception handling mess
+
 * DBus
 
 ** TODO [#C] Make all calls async

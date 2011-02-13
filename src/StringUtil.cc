@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include <sstream>
 
+#include <glib.h>
+
 #include "StringUtil.hh"
 
 using namespace std;
@@ -80,3 +82,22 @@ StringUtil::join(const vector<string> &parts, string separator)
   return result;
 }
 
+const std::string
+StringUtil::escape(const std::string &in)
+{
+  string ret;
+  char *s = g_uri_escape_string(in.c_str(), NULL, TRUE);
+  ret = s;
+  g_free(s);
+  return ret;
+}
+
+const std::string
+StringUtil::unescape(const std::string &in)
+{
+  string ret;
+  char *s = g_uri_unescape_string(in.c_str(), NULL);
+  ret = s;
+  g_free(s);
+  return ret;
+}

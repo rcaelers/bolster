@@ -65,8 +65,6 @@ private:
 private:
   const std::string get_timestamp() const;
   const std::string get_nonce() const;
-  const std::string escape_uri(const std::string &uri) const;
-  const std::string unescape_uri(const std::string &uri) const;
   const std::string normalize_uri(const std::string &uri, RequestParams &parameters) const;
   const std::string parameters_to_string(const RequestParams &parameters, ParameterMode mode) const;
   const std::string encrypt(const std::string &input, const std::string &key) const;

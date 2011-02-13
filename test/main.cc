@@ -10,11 +10,14 @@
 #include "CouchDBFactory.hh"
 #include "Json.hh"
 
+#include "Database.hh"
+#include "Settings.hh"
+
 using namespace std;
 
 static GMainLoop *loop = NULL;
 
-void run(ICouchDB *couch)
+void run1(ICouchDB *couch)
 {
   string in;
   string out;
@@ -105,6 +108,41 @@ void run(ICouchDB *couch)
 
 }
 
+void run2(ICouchDB *couch)
+{
+  Database *db = new Database(couch, "workrave_settings");
+  db->destroy();
+  db->create();
+
+  Settings *s = new Settings();
+  s->set_id("main_settings");
+  s->set_value("timers.microbreak.enabled", "yes");
+  s->set_value("timers.restbreak.enabled", "yes");
+
+  db->put(s);
+
+  s->set_value("timers.restbreak.enabled", "no");
+  db->put(s);
+
+  Document *doc = db->get("main_settings");
+  Settings *settings = dynamic_cast<Settings*>(doc);
+
+  if (settings == NULL)
+    {
+      g_debug("IEK Not Settings type");
+    }
+
+  settings->set_value("timers.dailylimit.enabled", "no");
+  db->put(settings);
+
+  Document *doc2 = db->get("main_settingsx");
+  if (doc2 != NULL)
+    {
+      g_debug("IEK Not null");
+    }
+  
+}
+
 int main(int argc, char **argv)
 {
   (void) argc;
@@ -130,7 +168,7 @@ int main(int argc, char **argv)
       
       // UbuntuOneCouch c;
       ICouchDB *c = CouchDBFactory::create(CouchDBFactory::Desktop);
-      c->signal_ready.connect(boost::bind(run, c));
+      c->signal_ready.connect(boost::bind(run2, c));
       c->init();
       
       g_main_loop_run(loop);

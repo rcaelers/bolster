@@ -12,11 +12,13 @@
 #include "JsonException.hh"
 #include "TestUtils.hh"
 
-BOOST_AUTO_TEST_SUITE(CouchDB_Tests)
+BOOST_AUTO_TEST_SUITE(Datebase_Tests)
 
 using namespace std;
 
-BOOST_AUTO_TEST_CASE(couch1)
+static bool couch_is_ready = false;
+
+BOOST_AUTO_TEST_CASE(database1)
 {
   try
     {

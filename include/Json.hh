@@ -29,26 +29,39 @@ public:
   enum Type { Object, Array, String, Int, Bool, None };
   
 public:
+ 	Json();
  	Json(const std::string &json);
   virtual ~Json();
 
+  std::string str() const;
   
   bool exists(const std::string &path) const;
   
   Type get_type(const std::string &path) const;
   int get_array_size(const std::string &path) const;
   void get_members(const std::string &path, std::list<std::string> &result) const;
-  
+
   std::string get_string(const std::string &path) const;
-  int get_int(const std::string &path) const;
   bool get_bool(const std::string &path) const;
+  int get_int(const std::string &path) const;
 
+  void set_string(const std::string &path, const std::string &value);
+  void set_bool(const std::string &path, bool value);
+  void set_int(const std::string &path, int value);
+  
 private:
-  JsonNode *get_node(const std::string &path) const;
+  JsonNode *get_node(const std::string &path, bool create = false) const;
+  JsonNode *create_node(JsonNodeType type) const;
+  JsonNode *create_node(JsonObject *, const std::string &name, JsonNodeType type) const;
+  JsonNode *create_node(JsonArray *, const std::string &name, JsonNodeType type) const;
 
+  void parse(const std::string &json);
+                   
 private:
-  JsonParser *parser;
   JsonNode *root_node;
 };
-  
+
+template <class T>
+T get_value(const std::string &path);
+
 #endif

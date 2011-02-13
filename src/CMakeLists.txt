@@ -20,9 +20,9 @@ include_directories(
 
 set(ALLLIBS ${GLIB_LIBRARIES} ${LIBGCRYPT_LIBS} ${SOUP_LIBRARIES} ${KEYRING_LIBRARIES} ${JASON_LIBRARIES})
 
-add_definitions(-W -Wall -Wextra -g -O0)
+add_definitions(-W -Wall -g -O0)
 add_definitions(-DHAVE_CONFIG_H=1)
 
-add_library(couch CouchDBFactory.cc WebBackendSoup.cc OAuth.cc UbuntuOneSSO.cc Secrets.cc CouchDB.cc DesktopCouch.cc UbuntuOneCouch.cc StringUtil.cc GDBusWrapper.cc Json.cc)
+add_library(couch CouchDBFactory.cc WebBackendSoup.cc OAuth.cc UbuntuOneSSO.cc Secrets.cc CouchDB.cc DesktopCouch.cc UbuntuOneCouch.cc StringUtil.cc GDBusWrapper.cc Json.cc Document.cc Database.cc)
 target_link_libraries(couch ${ALLLIBS})
 

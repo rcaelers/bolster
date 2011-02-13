@@ -168,28 +168,6 @@ OAuth::get_nonce() const
 
 
 const string
-OAuth::escape_uri(const string &uri) const
-{
-  string ret;
-  char *s = g_uri_escape_string(uri.c_str(), NULL, TRUE);
-  ret = s;
-  g_free(s);
-  return ret;
-}
-
-
-const string
-OAuth::unescape_uri(const string &uri) const
-{
-  string ret;
-  char *s = g_uri_unescape_string(uri.c_str(), NULL);
-  ret = s;
-  g_free(s);
-  return ret;
-}
-
-
-const string
 OAuth::normalize_uri(const string &uri, RequestParams &parameters) const
 {
   SoupURI *u = soup_uri_new(uri.c_str());
@@ -200,7 +178,7 @@ OAuth::normalize_uri(const string &uri, RequestParams &parameters) const
       if (u->query != NULL)
         {
           vector<string> query_params;
-          StringUtil::split(unescape_uri(u->query), '&', query_params);
+          StringUtil::split(StringUtil::unescape(u->query), '&', query_params);
 
           for (size_t i = 0; i < query_params.size(); ++i)
             {
@@ -261,7 +239,7 @@ OAuth::parameters_to_string(const RequestParams &parameters, ParameterMode mode)
       string key = it->first;
       if (!only_oauth || key.find("oauth_") == 0 || custom_headers.find(key) != custom_headers.end())
         {
-          string param = key + "=" + quotes + escape_uri(it->second) +  quotes;
+          string param = key + "=" + quotes + StringUtil::escape(it->second) +  quotes;
           sorted.push_back(param);
         }
     }
@@ -369,8 +347,8 @@ OAuth::create_oauth_header(const string &http_method,
   string normalized_parameters = parameters_to_string(parameters, ParameterModeSignatureBase);
 
   string signature_base_string = ( http_method + "&" +
-                                   escape_uri(normalized_uri) + "&" +
-                                   escape_uri(normalized_parameters)
+                                   StringUtil::escape(normalized_uri) + "&" +
+                                   StringUtil::escape(normalized_parameters)
                                    );
 
   // g_debug("BASE %s", signature_base_string.c_str());
@@ -490,7 +468,7 @@ OAuth::request_resource_owner_authorization()
       
       string command = ( string(program) + " " +
                          authorize_uri + "?oauth_token="
-                         + escape_uri(token_key)
+                         + StringUtil::escape(token_key)
                          );
   
       gint exit_code;
