@@ -92,9 +92,9 @@ Database::put(Document *doc)
 
   Json::Value root;
   Json::Reader reader;
-  bool json_ok = reader.parse(out, root);
+  bool ok = reader.parse(out, root);
   
-  if (root["ok"] != "")
+  if (ok && root.isMember("ok"))
     {
       doc->set_id(root["id"].asString());
       doc->set_revision(root["rev"].asString());
@@ -130,14 +130,12 @@ Database::get(const std::string id)
                  boost::str(boost::format("%1%/%2%") % StringUtil::escape(database_name) % StringUtil::escape(id)),
                  "", out);
 
+  Document *doc = NULL;
   Json::Value root;
   Json::Reader reader;
-  bool json_ok = reader.parse(out, root);
+  bool ok = reader.parse(out, root);
 
-  string x = boost::str(boost::format("/%1%/%2%") % StringUtil::escape(database_name) % StringUtil::escape(id));
-  
-  Document *doc = NULL;
-  if (!root.isMember("error") && root.isMember("_id"))
+  if (ok && !root.isMember("error") && root.isMember("_id"))
     {
       string type = root["record_type"].asString();
       doc = bolster::Registry<Document>::instance().create(type);
