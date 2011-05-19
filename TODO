@@ -5,19 +5,17 @@
 ** DONE [#B] Add const
 ** DONE [#B] Add Exception handling
 ** DONE [#C] Remove libcrypto++
-** TODO [#A] Check for memory leaks (valgrind)
 ** DONE [#C] Rename all callback functions to 'on_*'
 ** DONE [#C] Use uniform callback style.
-** TODO [#B] Handle/Report (DBus/SSO/OAuth/Couch) failures better
+** TODO [#A] Check for memory leaks (valgrind)
+** TODO [#B] Handle/Report (DBus/SSO/OAuth/Couch/Json) failures
+** TODO [#A] Change directory structure: document, backends,...
 
-* Json
-
-** TODO [#A] Rewrite - fix eception handling mess
 
 * DBus
 
-** TODO [#C] Make all calls async
 ** DONE [#C] Create wrapper for signals
+** TODO [#C] Make all calls async
 
 * OAuth
 
@@ -27,22 +25,24 @@
 ** DONE [#B] Add custom OAuth headers (e.g. Realm)
 ** DONE [#B] Test with Ubuntu One
 ** DONE [#C] Remove string message from result callback 
+** TODO [#A] Split into core oauth & negotiate
 
 * WebBackend
 
 ** DONE [#B] Add asynchronous request
-** TODO [#D] Proxy support
-** TODO [#B] Delegate escaping to IWebBackend
 ** DONE [#B] Fix memory leaks.
-** TODO [#B] Add stop listen.
-** TODO [#B] Refactor Soup -> C++ callbacks
 ** DONE [#B] Add Content type to API
 ** DONE [#B] Allow custom body return in server
+** TODO [#D] Proxy support
+** TODO [#B] Delegate escaping to IWebBackend
+** TODO [#B] Add stop listen.
 ** TODO [#D] Allow listening for multiple paths
+** TODO [#B] Refactor Soup -> C++ callbacks
+
 
 * Couch
 
-** TODO [#B] Add support for CouchDB
+** DONE [#B] Add support for Plain CouchDB
 ** DONE [#B] Add support for desktop CouchDB
 ** DONE [#C] Add support for Ubuntu One CouchDB
 
