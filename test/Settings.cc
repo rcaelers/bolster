@@ -21,11 +21,11 @@
 #endif
 
 #include <sstream>
+#include "json/json.h"
 
 #include "Settings.hh"
 
 #include "ICouchDB.hh"
-#include "Json.hh"
 
 using namespace std;
 
@@ -44,11 +44,11 @@ Settings::~Settings()
 void
 Settings::get_value(const std::string &key, std::string &value) const
 {
-  value = json->get_string(key);
+  value = root[key].asString();
 }
 
 void
 Settings::set_value(const std::string &key, const std::string &value)
 {
-  json->set_string(key, value);
+  root[key] = value;
 }

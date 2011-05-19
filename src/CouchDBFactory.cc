@@ -24,9 +24,10 @@
 
 #include "DesktopCouch.hh"
 #include "UbuntuOneCouch.hh"
+#include "PlainCouch.hh"
 
 ICouchDB *
-CouchDBFactory::create(Type type)
+CouchDBFactory::create(Type type, ICouchDB::Params params)
 {
   switch(type)
     {
@@ -37,5 +38,11 @@ CouchDBFactory::create(Type type)
     case UbuntuOne:
       return new UbuntuOneCouch();
       break;
+
+    case Plain:
+      return new PlainCouch(params);
+      break;
     }
+
+  return NULL;
 }

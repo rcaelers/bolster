@@ -114,7 +114,7 @@ DesktopCouch::on_port(int port)
     {
       g_debug("CouchDB is on port %d", port);
       couch_port = port;
-    }
+   }
   else
     {
       // FIXME: workaround for intermittent problems with DesktoCouch DBUS service

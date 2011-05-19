@@ -12,7 +12,7 @@ set(ALLLIBS ${GLIB_LIBRARIES} ${LIBGCRYPT_LIBS} ${SOUP_LIBRARIES} ${KEYRING_LIBR
 add_definitions(-W -Wall -Wextra -g -O0)
 add_definitions(-DHAVE_CONFIG_H=1)
 
-add_executable(test tests.cc JsonTests.cc CouchDBTests.cc TestUtils.cc)
+add_executable(test tests.cc CouchDBTests.cc TestUtils.cc)
 target_link_libraries(test ${ALLLIBS} couch)
 set_target_properties(test PROPERTIES COMPILE_FLAGS -I${CMAKE_SOURCE_DIR}/src)
 

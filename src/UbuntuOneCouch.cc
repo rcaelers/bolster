@@ -28,6 +28,7 @@
 #include <glib-object.h>
 #include <json-glib/json-glib.h>
 #include "boost/bind.hpp"
+#include "json/json.h"
 
 #include "OAuth.hh"
 #include "OAuthException.hh"
@@ -80,36 +81,20 @@ UbuntuOneCouch::on_pairing_success(const string &consumer_key, const string &con
   g_debug("response: %d %s", resp, response.c_str());
 
 	GError *error;
-	JsonParser *parser = json_parser_new();
 
-  couch_uri = "";
-  if (!json_parser_load_from_data(parser, response.c_str(), response.length(), &error))
+  Json::Value root;
+  Json::Reader reader;
+  bool json_ok = reader.parse(response, root);
+
+  if (json_ok)
     {
-      g_error_free(error);
-    }
-  else
-    {
-      // TODO: rewrite using Json class
-      JsonNode *root_node = json_parser_get_root(parser);
+      Json::Value &couchdb_obj = root["couchdb"];
 
-      if (json_node_get_node_type(root_node) == JSON_NODE_OBJECT)
-        {
-          JsonObject *root_obj = json_node_get_object(root_node);
+      string host = couchdb_obj["host"].asString();
+      string dbpath = couchdb_obj["dbpath"].asString();
 
-          if (root_obj != NULL)
-            {
-              JsonObject *couchdb_obj = json_object_get_object_member(root_obj, "couchdb");
-
-              if (couchdb_obj != NULL)
-                {
-                  const gchar *host = json_object_get_string_member(couchdb_obj, "host");
-                  const gchar *dbpath = json_object_get_string_member(couchdb_obj, "dbpath");
-
-                  couch_uri = string(host) + "/" + g_uri_escape_string(dbpath, NULL, TRUE) + "%2F";
-                  g_debug("root %s", couch_uri.c_str());
-                }
-            }
-        }
+      couch_uri = host + "/" + g_uri_escape_string(dbpath.c_str(), NULL, TRUE) + "%2F";
+      g_debug("root %s", couch_uri.c_str());
     }
 
   if (couch_uri != "")
@@ -120,8 +105,6 @@ UbuntuOneCouch::on_pairing_success(const string &consumer_key, const string &con
     {
       failure();
     }
-  
-  g_object_unref(G_OBJECT(parser));
 }
 
 void

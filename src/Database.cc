@@ -25,11 +25,14 @@
 #include <boost/format.hpp>
 #include <boost/scoped_ptr.hpp>
 
+#include <glib.h>
+
+#include "json/json.h"
+
 #include "Database.hh"
 
 #include "ICouchDB.hh"
 #include "Document.hh"
-#include "Json.hh"
 #include "StringUtil.hh"
 #include "Registry.hh"
 
@@ -71,35 +74,34 @@ void
 Database::put(Document *doc)
 {
   string id = doc->get_id();
-  string json = doc->str();
   string out;
 
-  g_debug("Putting: %s", json.c_str());
   if (id != "")
     {
       couch->request("PUT",
                      boost::str(boost::format("/%1%/%2%") % StringUtil::escape(database_name) % StringUtil::escape(id)),
-                     json, out);
+                     doc->str(), out);
     }
   else
     {
       couch->request("POST",
                      boost::str(boost::format("/%1%/") % StringUtil::escape(database_name)),
-                     json, out);
+                     doc->str(), out);
 
     }
 
-  g_debug("put: %s", out.c_str());
-  boost::scoped_ptr<Json> j(new Json(out));
-
-  if (j->get_bool("ok"))
+  Json::Value root;
+  Json::Reader reader;
+  bool json_ok = reader.parse(out, root);
+  
+  if (root["ok"] != "")
     {
-      doc->set_id(j->get_string("id"));
-      doc->set_revision(j->get_string("rev"));
+      doc->set_id(root["id"].asString());
+      doc->set_revision(root["rev"].asString());
     }
   else
     {
-      g_debug("Error: %s (%s)", j->get_string("error").c_str(), j->get_string("reason").c_str());
+      g_debug("Error: %s (%s)", root["error"].asString().c_str(), root["reason"].asString().c_str());
     }
 }
 
@@ -125,19 +127,21 @@ Database::get(const std::string id)
   string out;
 
   couch->request("GET",
-                 boost::str(boost::format("/%1%/%2%") % StringUtil::escape(database_name) % StringUtil::escape(id)),
+                 boost::str(boost::format("%1%/%2%") % StringUtil::escape(database_name) % StringUtil::escape(id)),
                  "", out);
 
-  Json *j = new Json(out);
+  Json::Value root;
+  Json::Reader reader;
+  bool json_ok = reader.parse(out, root);
 
-  g_debug("get: %s", out.c_str());
-
+  string x = boost::str(boost::format("/%1%/%2%") % StringUtil::escape(database_name) % StringUtil::escape(id));
+  
   Document *doc = NULL;
-  if (!j->exists("error") && j->exists("_id"))
+  if (!root.isMember("error") && root.isMember("_id"))
     {
-      string type = j->get_string("record_type");
+      string type = root["record_type"].asString();
       doc = bolster::Registry<Document>::instance().create(type);
-      doc->init(database_name,  j);
+      doc->init(database_name,  root);
     }
 
   return doc;

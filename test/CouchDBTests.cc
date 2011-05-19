@@ -7,9 +7,9 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "json/json.h"            
+
 #include "DesktopCouch.hh"
-#include "Json.hh"
-#include "JsonException.hh"
 #include "TestUtils.hh"
 
 BOOST_AUTO_TEST_SUITE(CouchDB_Tests)

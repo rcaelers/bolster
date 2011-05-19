@@ -6,9 +6,11 @@
 #include <string>
 #include <iostream>
 
+#include <glib.h>
+#include <glib-object.h>
+
 #include "ICouchDB.hh"
 #include "CouchDBFactory.hh"
-#include "Json.hh"
 
 #include "Database.hh"
 #include "Settings.hh"
@@ -21,7 +23,6 @@ void run1(ICouchDB *couch)
 {
   string in;
   string out;
-  Json *j;
 
   // couch->request("GET", "_all_dbs", "", out);
   // g_debug("all %s:", out.c_str());
@@ -40,9 +41,11 @@ void run1(ICouchDB *couch)
   couch->request("PUT", "/test/foo", in, out);
   g_debug("Add %s:", out.c_str());
 
-  j = new Json(out);
-  string rev = j->get_string("rev");
-  delete j;
+  Json::Value root;
+  Json::Reader reader;
+  bool json_ok = reader.parse(out, root);
+  
+  string rev = root["rev"].asString();
 
   // in = string("{ \"source\" : \"test\",  \"target\" : \"test2\" }");
   // g_debug("Replicate %s:", in.c_str());
@@ -81,9 +84,9 @@ void run1(ICouchDB *couch)
   couch->request("GET", "/test/foo?conflicts=true", "", out);
   g_debug("Get1 c %s", out.c_str());
 
-  j = new Json(out);
-  string crev = j->get_string("_conflicts.0");
-  delete j;
+  json_ok = reader.parse(out, root);
+  
+  string crev = root["_conflicts.0"].asString();
   g_debug("crev %s", crev.c_str());
 
   couch->request("GET", "/test/foo?deleted_conflicts=true", "", out);
@@ -166,7 +169,6 @@ int main(int argc, char **argv)
     {
       loop = g_main_loop_new(NULL, TRUE);
       
-      // UbuntuOneCouch c;
       ICouchDB *c = CouchDBFactory::create(CouchDBFactory::Desktop);
       c->signal_ready.connect(boost::bind(run2, c));
       c->init();

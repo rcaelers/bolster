@@ -16,29 +16,29 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef OAUTHEXCEPTION_HH
-#define OAUTHEXCEPTION_HH
+#ifndef PLAINCOUCH_HH
+#define PLAINCOUCH_HH
 
 #include <string>
+#include <gio/gio.h>
+#include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
+
+#include "CouchDB.hh"
+#include "Secrets.hh"
 #include "Exception.hh"
 
-class JsonException : public Exception
-
+class PlainCouch : public CouchDB
 {
 public:
-  explicit JsonException()
-    : Exception()
-  {
-  }
-
-  explicit JsonException(const std::string &detail)
-    : Exception(detail)
-  {
-  }
-
-  virtual ~JsonException() throw()
-  {
-  }
+  PlainCouch(ICouchDB::Params params);
+  virtual ~PlainCouch();
+  
+  void init();
+  
+private:
+  void check_readiness();
+  int couch_port;
 };
-
-#endif // OAUTHEXCEPTION_HH
+  
+#endif

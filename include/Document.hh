@@ -23,11 +23,11 @@
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include <json-glib/json-glib.h>
+#include "json/json.h"
+
 #include "Registry.hh"
 
 class ICouchDB;
-class Json;
 
 class Document
 {
@@ -38,7 +38,7 @@ public:
   Document();
   virtual ~Document();
 
-  void init(const std::string &database, Json *json);
+  void init(const std::string &database, Json::Value &root);
   
   std::string str() const;
 
@@ -52,7 +52,7 @@ public:
   
 protected:
   std::string database;
-  Json *json;
+  Json::Value root;
 };
 
 /*

@@ -16,31 +16,51 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ICOUCHDB_HH
-#define ICOUCHDB_HH
-
-#include <string>
-#include <boost/signals2.hpp>
-
-class ICouchDB
-{
-public:
-  typedef std::map<std::string, std::string> Params;
-
-  virtual ~ICouchDB() {}
-  
-  virtual void init() = 0;
-  virtual int request(const std::string &http_method,
-                      const std::string &uri,
-                      const std::string &body,
-                      std::string &response_body) = 0;
-
-  // FIXME: Somehow move these to CouchDB class
-  boost::signals2::signal<void ()> signal_ready;
-  boost::signals2::signal<void ()> signal_failure;
-
-  virtual bool is_ready() const = 0;
-  virtual std::string get_couch_uri() const = 0;
-};
-  
+#ifdef HAVE_CONFIG_H
+#include "config.h"
 #endif
+
+#include <sstream>
+
+
+#include "PlainCouch.hh"
+
+#include <glib.h>
+#include "boost/bind.hpp"
+
+#include "OAuth.hh"
+#include "OAuthException.hh"
+#include "WebBackendSoup.hh"
+#include "WebBackendException.hh"
+#include "Secrets.hh"
+#include "StringUtil.hh"
+#include "GDBusWrapper.hh"
+
+using namespace std;
+
+PlainCouch::PlainCouch(ICouchDB::Params params)
+  : CouchDB(),
+    couch_port(0)
+{
+  if (params.count("uri") > 0)
+    {
+      couch_uri = params["uri"];
+    }
+  else
+    {
+      couch_uri = "http://127.0.0.1:5984/";
+    }
+}
+
+
+PlainCouch::~PlainCouch()
+{
+}
+
+
+void
+PlainCouch::init()
+{
+  CouchDB::init();
+  complete();
+}

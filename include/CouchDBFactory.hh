@@ -21,12 +21,14 @@
 
 #include "ICouchDB.hh"
 
+#include <string>
+#include <map>
+
 class CouchDBFactory
 {
 public:
-  enum Type { Desktop, UbuntuOne };
-
-  static ICouchDB *create(Type type);
+  enum Type { Desktop, UbuntuOne, Plain };
+  static ICouchDB *create(Type type, ICouchDB::Params params = ICouchDB::Params());
 };
   
 #endif

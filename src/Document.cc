@@ -25,77 +25,72 @@
 #include "Document.hh"
 
 #include "ICouchDB.hh"
-#include "Json.hh"
-#include "JsonException.hh"
 
 using namespace std;
 
 Document::Document()
 {
-  json = new Json();
 }
 
 
 void
-Document::init(const std::string &database, Json *json)
+Document::init(const std::string &database, Json::Value &root)
 {
-  delete this->json;
-
   this->database = database;
-  this->json = json;
+  this->root = root;
 }
 
 
 Document::~Document()
 {
-  delete json;
 }
 
 
 std::string
 Document::str() const
 {
-  return json->str();
+  Json::StyledWriter writer;
+  return writer.write(root);
 }
 
 
 std::string
 Document::get_id() const
 {
-  return json->get_string("_id");
+    return root["_id"].asString();
 } 
 
 
 std::string
 Document::get_revision() const
 {
-  return json->get_string("_rev");
+  return root["_rev"].asString();
 }
 
 
 std::string
 Document::get_type() const
 {
-  return json->get_string("record_type");
+  return root["record_type"].asString();
 } 
 
 
 void
 Document::set_id(const std::string &id)
 {
-  json->set_string("_id", id);
+  root["_id"] = id;
 } 
 
 
 void
 Document::set_revision(const std::string &rev)
 {
-  json->set_string("_rev", rev);
+  root["_rev"] = rev;
 }
 
 
 void
 Document::set_type(const std::string &type)
 {
-  json->set_string("record_type", type);
+  root["record_type"] = type;
 } 

@@ -96,7 +96,12 @@ OAuth::request(const string &http_method,
                string &response_body)
 {
   RequestParams parameters;
-  string oauth_header = create_oauth_header(http_method, uri, parameters);
+  string oauth_header;
+
+  if (has_credentials())
+    {
+      oauth_header = create_oauth_header(http_method, uri, parameters);
+    }
 
   return backend->request(http_method, uri, body, oauth_header, response_body);
 }
@@ -108,8 +113,13 @@ OAuth::request(const string &http_method,
                const WebReplyCallback callback)
 {
   RequestParams parameters;
-  string oauth_header = create_oauth_header(http_method, uri, parameters);
 
+  string oauth_header;
+  if (has_credentials())
+    {
+      oauth_header = create_oauth_header(http_method, uri, parameters);
+    }
+  
   backend->request(http_method, uri, body, oauth_header, callback);
 }
 
