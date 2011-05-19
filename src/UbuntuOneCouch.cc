@@ -26,7 +26,6 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <json-glib/json-glib.h>
 #include "boost/bind.hpp"
 #include "json/json.h"
 

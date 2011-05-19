@@ -46,7 +46,9 @@ public:
                        const std::string &oauth_header,
                        const WebReplyCallback callback) = 0;
   
-  virtual void listen(const WebRequestCallback callback, const std::string &path, int &port) = 0;
+  virtual void listen(const WebRequestCallback callback,
+                      const std::string &path,
+                      int &port) = 0;
 };
 
 #endif

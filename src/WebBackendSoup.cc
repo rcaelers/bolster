@@ -59,7 +59,10 @@ WebBackendSoup::~WebBackendSoup()
 
 
 int
-WebBackendSoup::request(const string &http_method, const string &uri, const string &body, const string &oauth_header,
+WebBackendSoup::request(const string &http_method,
+                        const string &uri,
+                        const string &body,
+                        const string &oauth_header,
                         string &response_body)
 {
   if (sync_session == NULL)

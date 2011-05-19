@@ -49,7 +49,9 @@ public:
                        const std::string &oauth_header,
                        const WebReplyCallback callback);
   
-  virtual void listen(const WebRequestCallback callback, const std::string &path, int &port);
+  virtual void listen(const WebRequestCallback callback,
+                      const std::string &path,
+                      int &port);
   
 private:
   class AsyncRequestData

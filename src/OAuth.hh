@@ -42,9 +42,17 @@ public:
         const std::string &success_html = "",
         const std::string &failure_html= "");
 
-  void init(const std::string &consumer_key, const std::string &consumer_secret, const RequestParams &custom_headers,
-            SuccessCallback success_cb, FailedCallback failure_cb);
-  void init(const std::string &consumer_key, const std::string &consumer_secret, const std::string &token_key, std::string const &token_secret, const RequestParams &custom_headers);
+  void init(const std::string &consumer_key,
+            const std::string &consumer_secret,
+            const RequestParams &custom_headers,
+            SuccessCallback success_cb,
+            FailedCallback failure_cb);
+  
+  void init(const std::string &consumer_key,
+            const std::string &consumer_secret,
+            const std::string &token_key,
+            std::string const &token_secret,
+            const RequestParams &custom_headers);
   
   int request(const std::string &http_method,
               const std::string &uri,
@@ -57,7 +65,10 @@ public:
                const WebReplyCallback callback);
 
   bool has_credentials() const;
-  void get_credentials(std::string &consumer_key, std::string &consumer_secret, std::string &token_key, std::string &token_secret);
+  void get_credentials(std::string &consumer_key,
+                       std::string &consumer_secret,
+                       std::string &token_key,
+                       std::string &token_secret);
   
 private:
   enum ParameterMode { ParameterModeHeader, ParameterModeRequest, ParameterModeSignatureBase };
