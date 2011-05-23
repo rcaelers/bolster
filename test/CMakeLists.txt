@@ -19,3 +19,8 @@ set_target_properties(test PROPERTIES COMPILE_FLAGS -I${CMAKE_SOURCE_DIR}/src)
 add_executable(couch_test main.cc Settings.cc)
 target_link_libraries(couch_test ${ALLLIBS} couch)
 #set_target_properties(couch_test PROPERTIES COMPILE_FLAGS -I..)
+
+add_executable(wrap_test wraptest.cc)
+#target_link_libraries(wrap_test ${ALLLIBS} couch)
+
+include_directories(../src)
