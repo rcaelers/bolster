@@ -49,6 +49,8 @@ public:
   virtual void listen(const WebRequestCallback callback,
                       const std::string &path,
                       int &port) = 0;
+
+  virtual void stop_listen(const std::string &path) = 0;
 };
 
 #endif

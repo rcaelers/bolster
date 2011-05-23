@@ -28,5 +28,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY
 set (LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR})
 link_directories(${LIBRARY_OUTPUT_PATH} ${GLIB_LIBRARY_DIRS})
 
+set (CMAKE_CXX_FLAGS -std=c++0x)
+
 add_subdirectory(src)
 add_subdirectory(test)

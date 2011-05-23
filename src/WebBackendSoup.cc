@@ -33,8 +33,7 @@ using namespace std;
 WebBackendSoup::WebBackendSoup()
   : sync_session(NULL),
     async_session(NULL),
-    proxy(NULL),
-    server(NULL)
+    proxy(NULL)
 {
 }
 
@@ -51,9 +50,9 @@ WebBackendSoup::~WebBackendSoup()
       g_object_unref(async_session);
     }
 
-  if (server != NULL)
+  for (Servers::iterator i = servers.begin(); i != servers.end(); i++)
     {
-      g_object_unref(server);
+      g_object_unref(i->second);
     }
 }
 
@@ -102,18 +101,12 @@ WebBackendSoup::listen(WebRequestCallback callback, const string &path, int &por
 {
   AsyncServerData *data = new AsyncServerData(this, callback);
 
-  if (server != NULL)
-    {
-      g_object_unref(server);
-      server = NULL;
-    }
-
   SoupAddress *addr = soup_address_new("127.0.0.1", SOUP_ADDRESS_ANY_PORT);
   soup_address_resolve_sync(addr, NULL);
 
-  server = soup_server_new(SOUP_SERVER_SERVER_HEADER, "OAuth",
-                           SOUP_SERVER_INTERFACE, addr,
-                           NULL);
+  SoupServer *server = soup_server_new(SOUP_SERVER_SERVER_HEADER, "OAuth",
+                                       SOUP_SERVER_INTERFACE, addr,
+                                       NULL);
 	g_object_unref (addr);
 
 	if (server == NULL)
@@ -126,6 +119,19 @@ WebBackendSoup::listen(WebRequestCallback callback, const string &path, int &por
 
   soup_server_add_handler(server, path.c_str(), AsyncServerData::cb, data, NULL);
 	soup_server_run_async(server);
+
+  servers[path] = server;
+}
+
+void
+WebBackendSoup::stop_listen(const std::string &path)
+{
+  if (servers.find(path) != servers.end())
+    {
+      SoupServer *server = servers[path];
+      g_object_unref(server);
+      servers.erase(path);
+    }
 }
 
 void
@@ -206,8 +212,6 @@ WebBackendSoup::create_soup_message(const string &http_method,
   return message;
 }
   
-
-
 void
 WebBackendSoup::AsyncServerData::cb(SoupServer *server, SoupMessage *message, const char *path,
                                     GHashTable *query, SoupClientContext *context, gpointer data)

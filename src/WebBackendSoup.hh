@@ -20,6 +20,7 @@
 #define WEBBACKENDSOUP_HH
 
 #include <string>
+#include <map>
 
 #ifdef HAVE_GNOME
 #include <libsoup/soup-gnome.h>
@@ -52,6 +53,8 @@ public:
   virtual void listen(const WebRequestCallback callback,
                       const std::string &path,
                       int &port);
+
+  virtual void stop_listen(const std::string &path);
   
 private:
   class AsyncRequestData
@@ -95,11 +98,14 @@ private:
                                    const std::string &uri,
                                    const std::string &body,
                                    const std::string &oauth_header);
-  
+
+private:
   SoupSession *sync_session;
   SoupSession *async_session;
   SoupURI *proxy;
-  SoupServer *server;
+
+  typedef std::map<std::string, SoupServer*> Servers;
+  Servers servers;
 };
 
 #endif
