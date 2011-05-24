@@ -29,6 +29,7 @@
 #endif
 
 #include "IWebBackend.hh"
+#include "FunctionWrappers.hh"
 
 class OAuth;
 
@@ -57,39 +58,14 @@ public:
   virtual void stop_listen(const std::string &path);
   
 private:
-  class AsyncRequestData
-  {
-  public:
-    AsyncRequestData(WebBackendSoup *backend, WebReplyCallback callback)
-      : callback(callback), backend(backend)
-    {
-    }
-
-    static void cb(SoupSession *, SoupMessage *, gpointer);
-    WebReplyCallback callback;
-
-  private:
-    WebBackendSoup *backend;
-  };
-
-  class AsyncServerData
-  {
-  public:
-    AsyncServerData(WebBackendSoup *backend, WebRequestCallback callback)
-      : callback(callback), backend(backend)
-    {
-    }
-
-    static void cb(SoupServer *, SoupMessage *, const char *, GHashTable *, SoupClientContext *, gpointer);
-
-    WebRequestCallback callback;
-    
-  private:
-    WebBackendSoup *backend;
-  };
+  typedef void (WebBackendSoup::*AsyncRequest)(SoupServer *, SoupMessage *, const char *, GHashTable *, SoupClientContext *, WebRequestCallback);
+  typedef void (WebBackendSoup::*AsyncReply)(SoupSession *, SoupMessage *, WebReplyCallback);
   
-  void server_callback(SoupServer *server, SoupMessage *msg, const char *path, GHashTable *query, SoupClientContext *context, AsyncServerData *data);
-  void client_callback(SoupSession *session, SoupMessage *message, AsyncRequestData *data);
+  typedef FunctionForwarder<AsyncReply, WebReplyCallback> AsyncReplyForwarder;
+  typedef FunctionForwarder<AsyncRequest, WebRequestCallback> AsyncRequestForwarder;
+  
+  void server_callback(SoupServer *server, SoupMessage *msg, const char *path, GHashTable *query, SoupClientContext *context, WebRequestCallback cb);
+  void client_callback(SoupSession *session, SoupMessage *message, WebReplyCallback cb);
 
   void init_async();
   void init_sync();
