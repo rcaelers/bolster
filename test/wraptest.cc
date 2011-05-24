@@ -1,7 +1,7 @@
 #include <string>
 #include <iostream>
 
-#include "Wrap.hh"
+#include "FunctionWrappers.hh"
 
 using namespace std;
 
@@ -19,11 +19,11 @@ class Foo : public FunctionWrapper<int, int, const char *, int>
 class Bar
 {
 public:
-  int foo(int a, const char *b, int c)
+  int foo(int a, const char *b, int c, string extra1, string extra2)
   {
-    cout << a << " " << b << " " << c << " " << endl;
+    cout << a << " " << b << " " << c << " " << extra1 << " " << extra2 << endl;
     return 42;
-  }
+   }
 };
   
 void perform_c_callback(callback_t cb, void *userdata)
@@ -39,12 +39,14 @@ int main(int argc, char **argv)
   
   Foo foo;
   Bar bar;
+
+  typedef FunctionForwarder<decltype(&Bar::foo), std::string,std::string> BarfooWrapper;
   
-  FunctionForwarder<decltype(&Bar::foo)> w(&bar, &Bar::foo);
+  BarfooWrapper w(&bar, &Bar::foo, string("hello"), string("world"));
   
   perform_c_callback(Foo::Dispatch<4, callback_t>::dispatch, (void *)&foo);
 
-  perform_c_callback(FunctionForwarder<decltype(&Bar::foo)>::Dispatch<4, callback_t>::dispatch, (void *)&w);
+  perform_c_callback(BarfooWrapper::Dispatch<4, callback_t>::dispatch, (void *)&w);
   
   return 0;
 }

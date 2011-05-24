@@ -44,8 +44,7 @@ template <typename Ret, typename... Args>
 class FunctionWrapper
 {
 public:
-
-  template<int index, typename T>
+  template<int index, typename F>
   struct Dispatch;
 
   template<int index, typename CRet, typename... CArgs>
@@ -70,16 +69,20 @@ public:
 };
 
 
-template<typename F>
+template<typename F, typename... ExtraArgs>
 struct FunctionForwarder;
 
-template<typename T, typename Ret, typename... Args>
-class FunctionForwarder<Ret (T::*) (Args...)>
+template<typename T, typename Ret, typename... Args, typename... ExtraArgs>
+class FunctionForwarder<Ret (T::*) (Args...), ExtraArgs...>
 {
 public:
   typedef Ret (T::*FuncType)(Args...);
   
-  FunctionForwarder(T *object, FuncType func) : object(object), func(func) {}
+  FunctionForwarder(T *object, FuncType func, ExtraArgs... extra_args) : object(object), func(func)
+  {
+    std::tuple<ExtraArgs...> tuple(extra_args...);
+    extra = tuple;
+  }
   
   template<int index, typename F>
   struct Dispatch;
@@ -93,7 +96,10 @@ public:
       {
         std::tuple<CArgs...> tuple(args...);
         FunctionForwarder * t = (FunctionForwarder *) std::get<index - 1>(tuple);
-        return TupleDispatcher<sizeof...(CArgs), index>::dispatch(t->object, t->func, tuple);
+
+        std::tuple<CArgs..., ExtraArgs...> xtuple = tuple_cat(tuple, t->extra);
+
+        return TupleDispatcher<sizeof...(CArgs) + sizeof...(ExtraArgs), index>::dispatch(t->object, t->func, xtuple);
       }
     catch (std::exception &e)
       {
@@ -106,4 +112,5 @@ public:
 private:
   T *object;
   FuncType func;
+  std::tuple<ExtraArgs...> extra;
 };
