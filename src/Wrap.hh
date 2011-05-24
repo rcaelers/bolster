@@ -4,12 +4,12 @@ template <int Index, int SkipIndex>
 struct TupleDispatcher
 {
   template <typename T, typename Ret, typename... FuncArgs, typename... TupleArgs, typename... Args>
-  static void dispatch(T *object,
+  static Ret dispatch(T *object,
                        Ret (T::*func)(FuncArgs...),
                        const std::tuple<TupleArgs...> &tuple,
                        Args... args)
   {
-    TupleDispatcher<Index-1, SkipIndex>::dispatch(object, func, tuple, std::get<Index-1>(tuple), args...);
+    return TupleDispatcher<Index-1, SkipIndex>::dispatch(object, func, tuple, std::get<Index-1>(tuple), args...);
   }
 };
 
@@ -17,54 +17,93 @@ template <int SkipIndex>
 struct TupleDispatcher<SkipIndex, SkipIndex>
 {
   template <typename T, typename Ret, typename... FuncArgs, typename... TupleArgs, typename... Args>
-  static void dispatch(T* object,
-                       Ret (T::*func)(FuncArgs...),
-                       const std::tuple<TupleArgs...> &tuple,
-                       Args... args)
+  static Ret dispatch(T* object,
+                      Ret (T::*func)(FuncArgs...),
+                      const std::tuple<TupleArgs...> &tuple,
+                      Args... args)
   {
-    TupleDispatcher<SkipIndex-1, SkipIndex>::dispatch(object, func, tuple, args...);
+    return TupleDispatcher<SkipIndex-1, SkipIndex>::dispatch(object, func, tuple, args...);
   }
 };
 
-template <const int SkipIndex>
+template <int SkipIndex>
 struct TupleDispatcher<0, SkipIndex>
 {
   template <typename T, typename Ret, typename... FuncArgs, typename... TupleArgs, typename... Args>
-  static void dispatch(T* object,
-                       Ret (T::*func)(FuncArgs...),
-                       const std::tuple<TupleArgs...> &,
-                       Args... args)
+  static Ret dispatch(T* object,
+                      Ret (T::*func)(FuncArgs...),
+                      const std::tuple<TupleArgs...> &,
+                      Args... args)
   {
-    (object->*func)(args...);
+    return (object->*func)(args...);
   }
 };
 
 
-template <typename... Args>
-class CWrapper
+template <typename Ret, typename... Args>
+class FunctionWrapper
 {
 public:
 
   template<int index, typename T>
   struct Dispatch;
 
-  template<int index, typename Ret, typename... CArgs>
-  struct Dispatch<index,  Ret (*) (CArgs...)>
+  template<int index, typename CRet, typename... CArgs>
+  struct Dispatch<index,  CRet (*) (CArgs...)>
   {
-    static void dispatch(CArgs... args)
+    static CRet dispatch(CArgs... args)
     {
     try
       {
         std::tuple<CArgs...> tuple(args...);
-        CWrapper * t = (CWrapper *) std::get<index - 1>(tuple);
-        TupleDispatcher<sizeof...(CArgs), index>::dispatch(t, &CWrapper::operator(), tuple);
+        FunctionWrapper * t = (FunctionWrapper *) std::get<index - 1>(tuple);
+        return TupleDispatcher<sizeof...(CArgs), index>::dispatch(t, &FunctionWrapper::operator(), tuple);
       }
     catch (std::exception &e)
       {
       }
+    return CRet();
     }
   };
-
   
-  virtual void operator()(Args... args) = 0;
+  virtual Ret operator()(Args... args) = 0;
+};
+
+
+template<typename F>
+struct FunctionForwarder;
+
+template<typename T, typename Ret, typename... Args>
+class FunctionForwarder<Ret (T::*) (Args...)>
+{
+public:
+  typedef Ret (T::*FuncType)(Args...);
+  
+  FunctionForwarder(T *object, FuncType func) : object(object), func(func) {}
+  
+  template<int index, typename F>
+  struct Dispatch;
+
+  template<int index, typename CRet, typename... CArgs>
+  struct Dispatch<index,  CRet (*) (CArgs...)>
+  {
+    static CRet dispatch(CArgs... args)
+    {
+    try
+      {
+        std::tuple<CArgs...> tuple(args...);
+        FunctionForwarder * t = (FunctionForwarder *) std::get<index - 1>(tuple);
+        return TupleDispatcher<sizeof...(CArgs), index>::dispatch(t->object, t->func, tuple);
+      }
+    catch (std::exception &e)
+      {
+      }
+
+    return CRet();
+    }
+  };
+  
+private:
+  T *object;
+  FuncType func;
 };
