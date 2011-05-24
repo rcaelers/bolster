@@ -1,15 +1,13 @@
 #include <tuple>
 
-// TODO: add return type to TupleDispatcher
-
 template <int Index, int SkipIndex>
 struct TupleDispatcher
 {
-  template <typename T, typename... FuncArgs, typename... TupleArgs, typename... Args>
+  template <typename T, typename Ret, typename... FuncArgs, typename... TupleArgs, typename... Args>
   static void dispatch(T *object,
-                   void (T::*func)(FuncArgs...),
-                   const std::tuple<TupleArgs...> &tuple,
-                   Args... args)
+                       Ret (T::*func)(FuncArgs...),
+                       const std::tuple<TupleArgs...> &tuple,
+                       Args... args)
   {
     TupleDispatcher<Index-1, SkipIndex>::dispatch(object, func, tuple, std::get<Index-1>(tuple), args...);
   }
@@ -18,11 +16,11 @@ struct TupleDispatcher
 template <int SkipIndex>
 struct TupleDispatcher<SkipIndex, SkipIndex>
 {
-  template <typename T, typename... FuncArgs, typename... TupleArgs, typename... Args>
+  template <typename T, typename Ret, typename... FuncArgs, typename... TupleArgs, typename... Args>
   static void dispatch(T* object,
-                   void (T::*func)(FuncArgs...),
-                   const std::tuple<TupleArgs...> &tuple,
-                   Args... args)
+                       Ret (T::*func)(FuncArgs...),
+                       const std::tuple<TupleArgs...> &tuple,
+                       Args... args)
   {
     TupleDispatcher<SkipIndex-1, SkipIndex>::dispatch(object, func, tuple, args...);
   }
@@ -31,11 +29,11 @@ struct TupleDispatcher<SkipIndex, SkipIndex>
 template <const int SkipIndex>
 struct TupleDispatcher<0, SkipIndex>
 {
-  template <typename T, typename... FuncArgs, typename... TupleArgs, typename... Args>
+  template <typename T, typename Ret, typename... FuncArgs, typename... TupleArgs, typename... Args>
   static void dispatch(T* object,
-                   void (T::*func)(FuncArgs...),
-                   const std::tuple<TupleArgs...> &,
-                   Args... args)
+                       Ret (T::*func)(FuncArgs...),
+                       const std::tuple<TupleArgs...> &,
+                       Args... args)
   {
     (object->*func)(args...);
   }
@@ -49,7 +47,7 @@ public:
 
   template<int index, typename T>
   struct Dispatch;
-  
+
   template<int index, typename Ret, typename... CArgs>
   struct Dispatch<index,  Ret (*) (CArgs...)>
   {
@@ -67,5 +65,6 @@ public:
     }
   };
 
+  
   virtual void operator()(Args... args) = 0;
 };
