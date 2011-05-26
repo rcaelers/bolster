@@ -40,34 +40,6 @@ struct TupleDispatcher<0, SkipIndex>
 };
 
 
-template <typename Ret, typename... Args>
-class FunctionWrapper
-{
-public:
-  template<int index, typename F>
-  struct Dispatch;
-
-  template<int index, typename CRet, typename... CArgs>
-  struct Dispatch<index,  CRet (*) (CArgs...)>
-  {
-    static CRet dispatch(CArgs... args)
-    {
-    try
-      {
-        std::tuple<CArgs...> tuple(args...);
-        FunctionWrapper * t = (FunctionWrapper *) std::get<index - 1>(tuple);
-        return TupleDispatcher<sizeof...(CArgs), index>::dispatch(t, &FunctionWrapper::operator(), tuple);
-      }
-    catch (std::exception &e)
-      {
-      }
-    return CRet();
-    }
-  };
-  
-  virtual Ret operator()(Args... args) = 0;
-};
-
 template<typename F, typename G, int index, typename... ExtraArgs>
 struct FunctionForwarder;
 
