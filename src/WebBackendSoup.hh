@@ -61,8 +61,8 @@ private:
   typedef void (WebBackendSoup::*AsyncRequest)(SoupServer *, SoupMessage *, const char *, GHashTable *, SoupClientContext *, WebRequestCallback);
   typedef void (WebBackendSoup::*AsyncReply)(SoupSession *, SoupMessage *, WebReplyCallback);
   
-  typedef FunctionForwarder<AsyncReply, WebReplyCallback> AsyncReplyForwarder;
-  typedef FunctionForwarder<AsyncRequest, WebRequestCallback> AsyncRequestForwarder;
+  typedef FunctionForwarder<AsyncReply, SoupSessionCallback, 3, WebReplyCallback> AsyncReplyForwarder;
+  typedef FunctionForwarder<AsyncRequest, SoupServerCallback, 6, WebRequestCallback> AsyncRequestForwarder;
   
   void server_callback(SoupServer *server, SoupMessage *msg, const char *path, GHashTable *query, SoupClientContext *context, WebRequestCallback cb);
   void client_callback(SoupSession *session, SoupMessage *message, WebReplyCallback cb);

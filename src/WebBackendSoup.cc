@@ -93,7 +93,7 @@ WebBackendSoup::request(const string &http_method, const string &uri, const stri
 
   SoupMessage *message = create_soup_message(http_method, uri, body, oauth_header);
   soup_session_queue_message(async_session, message,
-                             AsyncReplyForwarder::Dispatch<3, SoupSessionCallback>::dispatch, fwd);
+                             AsyncReplyForwarder::dispatch, fwd);
 }
 
 
@@ -118,7 +118,7 @@ WebBackendSoup::listen(WebRequestCallback callback, const string &path, int &por
   port = soup_server_get_port(server);
   g_debug("Listening on %d", port);
 
-  soup_server_add_handler(server, path.c_str(), AsyncRequestForwarder::Dispatch<6, SoupServerCallback>::dispatch, fwd, NULL);
+  soup_server_add_handler(server, path.c_str(), AsyncRequestForwarder::dispatch, fwd, NULL);
 	soup_server_run_async(server);
 
   servers[path] = server;

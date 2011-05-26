@@ -40,13 +40,13 @@ int main(int argc, char **argv)
   Foo foo;
   Bar bar;
 
-  typedef FunctionForwarder<decltype(&Bar::foo), std::string,std::string> BarfooWrapper;
+  typedef FunctionForwarder<decltype(&Bar::foo), callback_t, 4, std::string,std::string> BarfooWrapper;
   
   BarfooWrapper w(&bar, &Bar::foo, string("hello"), string("world"));
   
   perform_c_callback(Foo::Dispatch<4, callback_t>::dispatch, (void *)&foo);
 
-  perform_c_callback(BarfooWrapper::Dispatch<4, callback_t>::dispatch, (void *)&w);
+  perform_c_callback(BarfooWrapper::dispatch, (void *)&w);
   
   return 0;
 }

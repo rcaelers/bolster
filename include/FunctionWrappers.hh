@@ -68,12 +68,11 @@ public:
   virtual Ret operator()(Args... args) = 0;
 };
 
-
-template<typename F, typename... ExtraArgs>
+template<typename F, typename G, int index, typename... ExtraArgs>
 struct FunctionForwarder;
 
-template<typename T, typename Ret, typename... Args, typename... ExtraArgs>
-class FunctionForwarder<Ret (T::*) (Args...), ExtraArgs...>
+template<typename T, typename Ret, typename... Args, typename CRet, typename... CArgs, int index, typename... ExtraArgs>
+class FunctionForwarder<Ret (T::*) (Args...), CRet (*) (CArgs...), index, ExtraArgs...>
 {
 public:
   typedef Ret (T::*FuncType)(Args...);
@@ -84,14 +83,8 @@ public:
     extra = tuple;
   }
   
-  template<int index, typename F>
-  struct Dispatch;
-
-  template<int index, typename CRet, typename... CArgs>
-  struct Dispatch<index,  CRet (*) (CArgs...)>
+  static CRet dispatch(CArgs... args)
   {
-    static CRet dispatch(CArgs... args)
-    {
     try
       {
         std::tuple<CArgs...> tuple(args...);
@@ -106,8 +99,7 @@ public:
       }
 
     return CRet();
-    }
-  };
+  }
   
 private:
   T *object;
