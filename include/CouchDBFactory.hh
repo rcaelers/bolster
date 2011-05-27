@@ -21,9 +21,6 @@
 
 #include "ICouchDB.hh"
 
-#include <string>
-#include <map>
-
 class CouchDBFactory
 {
 public:

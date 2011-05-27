@@ -23,7 +23,7 @@
 #include "Secrets.hh"
 
 #include <glib.h>
-#include "boost/bind.hpp"
+#include <boost/bind.hpp>
 
 #include "Exception.hh"
 

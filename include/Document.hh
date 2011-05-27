@@ -20,7 +20,6 @@
 #define DOCUMENT_HH
 
 #include <string>
-#include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include "json/json.h"
@@ -41,7 +40,6 @@ public:
   void init(const std::string &database, Json::Value &root);
   
   std::string str() const;
-
   std::string get_id() const;
   std::string get_revision() const;
   std::string get_type() const;

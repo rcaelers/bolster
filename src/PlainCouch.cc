@@ -20,25 +20,11 @@
 #include "config.h"
 #endif
 
-#include <sstream>
-
-
 #include "PlainCouch.hh"
-
-#include <glib.h>
-#include "boost/bind.hpp"
-
-#include "OAuth.hh"
-#include "OAuthException.hh"
-#include "WebBackendSoup.hh"
-#include "WebBackendException.hh"
-#include "Secrets.hh"
-#include "StringUtil.hh"
-#include "GDBusWrapper.hh"
 
 using namespace std;
 
-PlainCouch::PlainCouch(ICouchDB::Params params)
+PlainCouch::PlainCouch(ICouchDB::Params &params)
   : CouchDB(),
     couch_port(0)
 {
@@ -50,11 +36,6 @@ PlainCouch::PlainCouch(ICouchDB::Params params)
     {
       couch_uri = "http://127.0.0.1:5984/";
     }
-}
-
-
-PlainCouch::~PlainCouch()
-{
 }
 
 

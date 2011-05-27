@@ -20,32 +20,22 @@
 #include "config.h"
 #endif
 
-#include <sstream>
-
-
 #include "DesktopCouch.hh"
 
+#include <sstream>
+#include <boost/bind.hpp>
 #include <glib.h>
-#include "boost/bind.hpp"
 
 #include "OAuth.hh"
 #include "OAuthException.hh"
-#include "WebBackendSoup.hh"
-#include "WebBackendException.hh"
 #include "Secrets.hh"
 #include "StringUtil.hh"
-#include "GDBusWrapper.hh"
 
 using namespace std;
 
 DesktopCouch::DesktopCouch()
   : CouchDB(),
     couch_port(0)
-{
-}
-
-
-DesktopCouch::~DesktopCouch()
 {
 }
 
@@ -93,10 +83,12 @@ DesktopCouch::on_secret_success(const string &secret)
     {
       OAuth::RequestParams parameters;
       oauth->init(elements[0], elements[1], elements[2], elements[3], parameters);
-
-      g_debug("OK %s", secret.c_str());
+      check_readiness();
     }
-  check_readiness();
+  else
+    {
+      failure();
+    }
 }
 
 
@@ -140,39 +132,4 @@ DesktopCouch::check_readiness()
 
       complete();
     }
-}
-
-DesktopCouchDBus::DesktopCouchDBus()
-  : DBusObject("org.desktopcouch.CouchDB", "/", "org.desktopcouch.CouchDB")
-{
-}
-    
-
-void
-DesktopCouchDBus::get_port(GetPortCallback callback)
-{
-  GDBusMethodReply *w = new GDBusMethodReply(boost::bind(&DesktopCouchDBus::on_get_port_reply, this, _1, _2, callback));
-  
-  g_dbus_proxy_call(proxy,
-                    "getPort",
-                    NULL,
-                    G_DBUS_CALL_FLAGS_NONE,
-                    -1,
-                    NULL,
-                    GDBusMethodReply::cb,
-                    w);
-}
-
-
-void
-DesktopCouchDBus::on_get_port_reply(GVariant *var, GError *error, GetPortCallback callback)
-{
-  int port = 0;
-  
-  if (error == NULL && var != NULL)
-    {
-      g_variant_get(var, "(i)", &port);
-    }
-
-  callback(port);
 }

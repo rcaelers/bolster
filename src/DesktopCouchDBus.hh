@@ -16,47 +16,27 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef COUCHDB_HH
-#define COUCHDB_HH
+#ifndef DESKTOPCOUCHDBUS_HH
+#define DESKTOPCOUCHDBUS_HH
 
-#include <string>
-#include <boost/signals2.hpp>
+#include <gio/gio.h>
+#include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
 
-#include "ICouchDB.hh"
+#include "GDBusWrapper.hh"
 
-class OAuth;
-class IWebBackend;
-
-class CouchDB : public ICouchDB
+class DesktopCouchDBus : public DBusObject
 {
 public:
- 	CouchDB();
-  virtual ~CouchDB();
-  
-  virtual void init();
+  typedef boost::shared_ptr<DesktopCouchDBus> Ptr;
+  typedef boost::function<void (int) > GetPortCallback;
 
-  int request(const std::string &http_method,
-              const std::string &uri,
-              const std::string &body,
-              std::string &response_body);
-
-  bool is_ready() const;
-  std::string get_couch_uri() const;
-  
-private:
-  void init_oauth();
-  
-protected:
-  void complete();
-  void failure();
-  
-protected:
-  std::string couch_uri;
-  OAuth *oauth;
-  IWebBackend *backend;
+public:
+  DesktopCouchDBus();
+  void get_port(GetPortCallback callback);
 
 private:
-  bool ready;
+  void on_get_port_reply(GVariant *var, GError *error, GetPortCallback callback); 
 };
-  
+
 #endif

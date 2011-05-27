@@ -20,11 +20,7 @@
 #include "config.h"
 #endif
 
-#include <sstream>
-
 #include "Document.hh"
-
-#include "ICouchDB.hh"
 
 using namespace std;
 

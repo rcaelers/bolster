@@ -20,35 +20,16 @@
 #define DESKTOPCOUCH_HH
 
 #include <string>
-#include <gio/gio.h>
-#include <boost/function.hpp>
-#include <boost/shared_ptr.hpp>
 
 #include "CouchDB.hh"
+#include "DesktopCouchDBus.hh"
 #include "Secrets.hh"
-#include "GDBusWrapper.hh"
-#include "Exception.hh"
-
-class DesktopCouchDBus : public DBusObject
-{
-public:
-  typedef boost::shared_ptr<DesktopCouchDBus> Ptr;
-  typedef boost::function<void (int) > GetPortCallback;
-
-public:
-  DesktopCouchDBus();
-  void get_port(GetPortCallback callback);
-
-private:
-  void on_get_port_reply(GVariant *var, GError *error, GetPortCallback callback); 
-};
 
 class DesktopCouch : public CouchDB
 {
 public:
  	DesktopCouch();
-  virtual ~DesktopCouch();
-  
+
   void init();
   
 private:
@@ -61,6 +42,7 @@ private:
   void on_secret_failed();
   void on_port(int port); 
 
+private:  
   DesktopCouchDBus::Ptr couch_dbus;
   Secrets::Secrets::Ptr secrets;
   int couch_port;

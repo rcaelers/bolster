@@ -20,20 +20,13 @@
 #include "config.h"
 #endif
 
-#include <sstream>
-
 #include "UbuntuOneCouch.hh"
 
-#include <glib.h>
-#include <glib-object.h>
-#include "boost/bind.hpp"
+#include <boost/bind.hpp>
 #include "json/json.h"
 
 #include "OAuth.hh"
 #include "OAuthException.hh"
-#include "WebBackendSoup.hh"
-#include "WebBackendException.hh"
-#include "StringUtil.hh"
 #include "UbuntuOneSSO.hh"
 
 using namespace std;
@@ -72,26 +65,23 @@ UbuntuOneCouch::on_pairing_success(const string &consumer_key, const string &con
   OAuth::RequestParams parameters;
   oauth->init(consumer_key, consumer_secret, token_key, token_secret, parameters);
 
-  string account_uri = "https://one.ubuntu.com/api/account/";
-
+  // TODO: use 'resp'
   string response;
-  int resp = oauth->request("GET", account_uri, "", response);
-
-  g_debug("response: %d %s", resp, response.c_str());
-
+  int resp = oauth->request("GET", "https://one.ubuntu.com/api/account/", "", response);
+  
   Json::Value root;
   Json::Reader reader;
   bool json_ok = reader.parse(response, root);
 
   if (json_ok)
     {
+      // TODO: handle incorrect response.
       Json::Value &couchdb_obj = root["couchdb"];
 
       string host = couchdb_obj["host"].asString();
       string dbpath = couchdb_obj["dbpath"].asString();
 
       couch_uri = host + "/" + g_uri_escape_string(dbpath.c_str(), NULL, TRUE) + "%2F";
-      g_debug("root %s", couch_uri.c_str());
     }
 
   if (couch_uri != "")
@@ -103,6 +93,7 @@ UbuntuOneCouch::on_pairing_success(const string &consumer_key, const string &con
       failure();
     }
 }
+
 
 void
 UbuntuOneCouch::on_pairing_failed()

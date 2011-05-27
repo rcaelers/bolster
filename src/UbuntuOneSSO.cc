@@ -23,12 +23,11 @@
 #include "UbuntuOneSSO.hh"
 
 #include <glib.h>
-#include "boost/bind.hpp"
+#include <boost/bind.hpp>
 
 #include "OAuth.hh"
 #include "OAuthException.hh"
 #include "WebBackendSoup.hh"
-#include "WebBackendException.hh"
 #include "StringUtil.hh"
 #include "GDBusWrapper.hh"
 
@@ -58,8 +57,8 @@ UbuntuOneSSO::~UbuntuOneSSO()
 void
 UbuntuOneSSO::on_signal_static(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters, gpointer user_data)
 {
-  UbuntuOneSSO *u = (UbuntuOneSSO *)user_data;
-  u->on_signal(proxy, sender_name, signal_name, parameters);
+  UbuntuOneSSO *sso = (UbuntuOneSSO *)user_data;
+  sso->on_signal(proxy, sender_name, signal_name, parameters);
 }
 
 
@@ -69,44 +68,34 @@ UbuntuOneSSO::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_nam
   (void) proxy;
   (void) sender_name;
   
-  gchar *parameters_str = g_variant_print(parameters, TRUE);
-  g_debug("Received Signal: %s: %s\n", signal_name, parameters_str);
-  g_free(parameters_str);
-
-  GVariant *dict = NULL;
   char *app_name = NULL;
   map<string, string> info;
   
   if (string(signal_name) == "CredentialsFound" ||
       string(signal_name) == "CredentialsError")
     {
-      g_variant_get(parameters, "(&s@a{ss})",
-                    &app_name,
-                    &dict);
+      GVariant *dict = NULL;
+      g_variant_get(parameters, "(&s@a{ss})", &app_name, &dict);
 
-      gchar *key;
-      gchar *value;
-      GVariantIter iter;
-      g_variant_iter_init(&iter, dict);
-      while (g_variant_iter_next(&iter, "{ss}", &key, &value))
+      if (dict != NULL)
         {
-          info[key] = value;
+          gchar *key;
+          gchar *value;
+          GVariantIter iter;
+          g_variant_iter_init(&iter, dict);
+          while (g_variant_iter_next(&iter, "{ss}", &key, &value))
+            {
+              info[key] = value;
+            }
         }
+    }
+  if (string(signal_name) == "CredentialsFound")
+    {
+      on_credentials_success(info);
     }
   else
     {
-      g_variant_get(parameters, "(&s)", &app_name);
-    }
-
-  if (string(signal_name) == "CredentialsFound")
-    {
-      on_credentials_success(app_name, info);
-    }
-  else if ((string(signal_name) == "CredentialsNotFound") ||
-           (string(signal_name) == "CredentialsError") ||
-           (string(signal_name) == "AuthorizationDenied"))
-    {
-      on_credentials_failed(app_name);
+      on_credentials_failed();
     }
 
   // FIXME: free dict & app_name?
@@ -114,10 +103,8 @@ UbuntuOneSSO::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_nam
 
 
 void
-UbuntuOneSSO::on_credentials_success(const string &app_name, const map<string, string> &credentials)
+UbuntuOneSSO::on_credentials_success(const map<string, string> &credentials)
 {
-  (void) app_name;
-
   try
     {
       string consumer_key = map_get(credentials, string("consumer_key"));
@@ -130,19 +117,15 @@ UbuntuOneSSO::on_credentials_success(const string &app_name, const map<string, s
   catch(Exception &e)
     {
       // Fallback to OAuth
-      g_debug("on_credentials_found: exception %s", e.details().c_str());
       pair_oauth();
     }
 }
 
 
 void
-UbuntuOneSSO::on_credentials_failed(const string &app_name)
+UbuntuOneSSO::on_credentials_failed()
 {
-  (void) app_name;
-
   // Fallback to OAuth
-  g_debug("on_credentials_not_found: Trying OAuth");
   pair_oauth();
 }
 
@@ -217,9 +200,10 @@ void
 UbuntuOneSSO::pair_sso()
 {
   GError *error = NULL;
-
   GVariantBuilder b;
+  
   g_variant_builder_init(&b, G_VARIANT_TYPE("a{ss}"));
+  // TODO: Customize help text.
   g_variant_builder_add(&b, "{ss}", "help_text", "Workrave wants to access you Ubuntu One account");
 
   g_dbus_proxy_call_sync(proxy,
@@ -231,7 +215,6 @@ UbuntuOneSSO::pair_sso()
                          &error);
   if (error != NULL)
     {
-      g_debug("Failed to register");
       g_error_free(error);
       pair_oauth();
     }
@@ -243,8 +226,8 @@ UbuntuOneSSO::pair_oauth()
 {
   try
     {
-      // FIXME: retrieve OAuth URL from Ubuntu.
-      // FIXME: Customize html
+      // TODO: retrieve OAuth URL from Ubuntu.
+      // TODO: Customize html
       backend = new WebBackendSoup();
       oauth = new OAuth(backend,
                         "https://one.ubuntu.com/oauth/request/",

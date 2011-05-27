@@ -25,7 +25,7 @@
 #include <sstream>
 #include <string.h>
 #include <list>
-#include "boost/bind.hpp"
+#include <boost/bind.hpp>
 
 #include <glib.h>
 

@@ -22,12 +22,10 @@
 
 #include "CouchDB.hh"
 
-#include "boost/bind.hpp"
+#include <boost/bind.hpp>
 
 #include "OAuth.hh"
-#include "OAuthException.hh"
 #include "WebBackendSoup.hh"
-#include "WebBackendException.hh"
 #include "StringUtil.hh"
 
 using namespace std;
@@ -44,6 +42,7 @@ CouchDB::~CouchDB()
 {
   signal_ready.disconnect_all_slots();
   signal_failure.disconnect_all_slots();
+
   if (oauth != NULL)
     {
       delete oauth;
@@ -61,21 +60,6 @@ CouchDB::init()
 {
   init_oauth();
 }
-
-
-
-// boost::signals2::signal<void ()>
-// CouchDB::signal_ready()
-// {
-//   return ready_signal;
-// }
-
-
-// boost::signals2::signal<void ()>
-// CouchDB::signal_failed()
-// {
-//   return failed_signal;
-// }
 
 
 void

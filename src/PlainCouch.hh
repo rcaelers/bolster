@@ -19,25 +19,19 @@
 #ifndef PLAINCOUCH_HH
 #define PLAINCOUCH_HH
 
-#include <string>
-#include <gio/gio.h>
-#include <boost/function.hpp>
-#include <boost/shared_ptr.hpp>
-
 #include "CouchDB.hh"
-#include "Secrets.hh"
-#include "Exception.hh"
 
 class PlainCouch : public CouchDB
 {
 public:
-  PlainCouch(ICouchDB::Params params);
-  virtual ~PlainCouch();
-  
+  PlainCouch(ICouchDB::Params &params);
+
   void init();
   
 private:
   void check_readiness();
+
+private:  
   int couch_port;
 };
   

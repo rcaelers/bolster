@@ -20,22 +20,17 @@
 #include "config.h"
 #endif
 
-#include <sstream>
+#include "Database.hh"
 
 #include <boost/format.hpp>
-#include <boost/scoped_ptr.hpp>
-
 #include <glib.h>
 
 #include "json/json.h"
-
-#include "Database.hh"
 
 #include "ICouchDB.hh"
 #include "Document.hh"
 #include "StringUtil.hh"
 #include "Registry.hh"
-
 
 using namespace std;
 
@@ -59,6 +54,7 @@ Database::create()
                  boost::str(boost::format("/%1%") % StringUtil::escape(database_name)),
                  "", out);
 }
+
 
 void
 Database::destroy()
@@ -122,7 +118,7 @@ Database::remove(Document *doc)
 
 
 Document *
-Database::get(const std::string id)
+Database::get(const std::string &id)
 {
   string out;
 
@@ -144,6 +140,7 @@ Database::get(const std::string id)
 
   return doc;
 }
+
 
 std::string
 Database::get_database_name() const

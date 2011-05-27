@@ -20,15 +20,10 @@
 #define UBUNTUONECOUCH_HH
 
 #include <string>
-#include <map>
-#include <gio/gio.h>
-#include <boost/function.hpp>
 
 #include "CouchDB.hh"
 
 class UbuntuOneSSO;
-
-#include "Exception.hh"
 
 class UbuntuOneCouch : public CouchDB
 {

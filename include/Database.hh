@@ -20,9 +20,6 @@
 #define DATABASE_HH
 
 #include <string>
-#include <boost/function.hpp>
-#include <boost/shared_ptr.hpp>
-
 
 class ICouchDB;
 class Document;
@@ -38,7 +35,7 @@ public:
   
   void put(Document *doc);
   void remove(Document *doc);
-  Document *get(const std::string id);
+  Document *get(const std::string &id);
 
   std::string get_database_name() const;
   
@@ -46,6 +43,5 @@ private:
   std::string database_name;
   ICouchDB *couch;
 };
-
   
 #endif

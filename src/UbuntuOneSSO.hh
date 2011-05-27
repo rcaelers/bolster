@@ -48,11 +48,12 @@ private:
   static void on_signal_static(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters, gpointer user_data);
   void on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_name, GVariant *parameters);
   
-  void on_credentials_success(const std::string &app_name, const std::map<std::string, std::string> &credentials);
-  void on_credentials_failed(const std::string &app_name);
+  void on_credentials_success(const std::map<std::string, std::string> &credentials);
+  void on_credentials_failed();
   void on_oauth_success();
   void on_oauth_failed();
 
+private:  
   GDBusProxy *proxy;
   OAuth *oauth;
   IWebBackend *backend;
