@@ -23,47 +23,23 @@
 #include <map>
 #include <boost/function.hpp>
 
-#include "IWebBackend.hh"
+#include "IHttpRequestFilter.hh"
 
-class OAuth
+class OAuth : public IHttpRequestFilter
 {
 public:
   typedef std::map<std::string, std::string> RequestParams;
-  typedef boost::function<void () > SuccessCallback;
-  typedef boost::function<void () > FailedCallback;
 
-  typedef IWebBackend::WebReplyCallback WebReplyCallback;
-  
 public:
- 	OAuth(IWebBackend *backend,
-        const std::string &temporary_request_uri = "",
-        const std::string &authorize_uri = "",
-        const std::string &token_request_uri = "",
-        const std::string &success_html = "",
-        const std::string &failure_html= "");
+ 	OAuth();
 
-  void init(const std::string &consumer_key,
-            const std::string &consumer_secret,
-            const RequestParams &custom_headers,
-            SuccessCallback success_cb,
-            FailedCallback failure_cb);
-  
-  void init(const std::string &consumer_key,
-            const std::string &consumer_secret,
-            const std::string &token_key,
-            std::string const &token_secret,
-            const RequestParams &custom_headers);
-  
-  int request(const std::string &http_method,
-              const std::string &uri,
-              const std::string &body,
-              std::string &response_body);
-  
-  void request(const std::string &http_method,
-               const std::string &uri,
-               const std::string &body,
-               const WebReplyCallback callback);
+  void set_consumer(const std::string &consumer_key, const std::string &consumer_secret);
+  void set_token(const std::string &token_key, const std::string &token_secret);
+  void set_custom_headers(const RequestParams &custom_headers = RequestParams());
 
+  virtual bool filter_http_request(const std::string &http_method, std::string &uri, std::string &body,
+                                   std::map<std::string, std::string> &headers);
+  
   bool has_credentials() const;
   void get_credentials(std::string &consumer_key,
                        std::string &consumer_secret,
@@ -80,35 +56,16 @@ private:
   const std::string parameters_to_string(const RequestParams &parameters, ParameterMode mode) const;
   const std::string encrypt(const std::string &input, const std::string &key) const;
   const std::string create_oauth_header(const std::string &http_method, const std::string &uri, RequestParams &parameters) const;
-  void parse_query(const std::string &query, RequestParams &params) const;
-
-  void request_temporary_credentials();
-  void request_resource_owner_authorization();
-  void request_token(const std::string &token, const std::string &verifier);
-
-  void on_temporary_credentials_ready(int status, const std::string &response);
-  void on_resource_owner_authorization_ready(const std::string &method, const std::string &query, const std::string &body,
-                                             std::string &response_content_type, std::string &response_body);
-  void on_token_ready(int status, const std::string &response);
 
 private:  
-  IWebBackend *backend;
   RequestParams custom_headers;
 
-  SuccessCallback success_cb;
-  FailedCallback failure_cb;
-  
-  std::string temporary_request_uri;
-  std::string authorize_uri;
-  std::string token_request_uri;
  	std::string consumer_key;
  	std::string consumer_secret;
  	std::string token_key;
  	std::string token_secret;
  	std::string signature_method;
   std::string oauth_version;
-  std::string success_html;
-  std::string failure_html;
 };
 
 #endif

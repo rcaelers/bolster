@@ -26,7 +26,7 @@
 
 #include "OAuth.hh"
 #include "WebBackendSoup.hh"
-#include "StringUtil.hh"
+#include "Uri.hh"
 
 using namespace std;
 
@@ -66,7 +66,9 @@ void
 CouchDB::init_oauth()
 {
   backend = new WebBackendSoup();
-  oauth = new OAuth(backend);
+  oauth = new OAuth();
+
+  backend->add_filter(oauth);
 }
 
 
@@ -107,5 +109,5 @@ CouchDB::request(const std::string &http_method,
                  const std::string &body,
                  std::string &response_body)
 {
-  return oauth->request(http_method, couch_uri + uri, body, response_body);
+  return backend->request(http_method, couch_uri + uri, body, response_body);
 }

@@ -26,7 +26,7 @@
 
 #include "WebBackendException.hh"
 #include "OAuth.hh"
-#include "StringUtil.hh"
+#include "Uri.hh"
 
 using namespace std;
 
@@ -50,10 +50,23 @@ WebBackendSoup::~WebBackendSoup()
       g_object_unref(async_session);
     }
 
-  for (Servers::iterator i = servers.begin(); i != servers.end(); i++)
+  for (ServerList::iterator i = servers.begin(); i != servers.end(); i++)
     {
       g_object_unref(i->second);
     }
+}
+
+void
+WebBackendSoup::add_filter(IHttpRequestFilter *filter)
+{
+  filters.push_back(filter);
+}
+
+
+void
+WebBackendSoup::remove_filter(IHttpRequestFilter *filter)
+{
+  filters.remove(filter);
 }
 
 
@@ -61,7 +74,6 @@ int
 WebBackendSoup::request(const string &http_method,
                         const string &uri,
                         const string &body,
-                        const string &oauth_header,
                         string &response_body)
 {
   if (sync_session == NULL)
@@ -69,7 +81,7 @@ WebBackendSoup::request(const string &http_method,
       init_sync();
     }
 
-  SoupMessage *message = create_soup_message(http_method, uri, body, oauth_header);
+  SoupMessage *message = create_soup_message(http_method, uri, body);
   soup_session_send_message(sync_session, message);
 
   response_body = (message->response_body->length > 0) ? message->response_body->data : "";
@@ -82,14 +94,14 @@ WebBackendSoup::request(const string &http_method,
 
 
 void
-WebBackendSoup::request(const string &http_method, const string &uri, const string &body, const string &oauth_header, WebReplyCallback callback)
+WebBackendSoup::request(const string &http_method, const string &uri, const string &body, WebReplyCallback callback)
 {
   if (async_session == NULL)
     {
       init_async();
     }
 
-  SoupMessage *message = create_soup_message(http_method, uri, body, oauth_header);
+  SoupMessage *message = create_soup_message(http_method, uri, body);
   AsyncReplyForwarder *forwarder = new AsyncReplyForwarder(this, &WebBackendSoup::client_callback, callback);
   soup_session_queue_message(async_session, message, AsyncReplyForwarder::dispatch, forwarder);
 }
@@ -190,8 +202,7 @@ WebBackendSoup::init_sync()
 SoupMessage *
 WebBackendSoup::create_soup_message(const string &http_method,
                                     const string &uri,
-                                    const string &body,
-                                    const string &oauth_header)
+                                    const string &body)
 {
   SoupMessage *message = soup_message_new(http_method.c_str(), uri.c_str());
   if (message == NULL)
@@ -205,9 +216,18 @@ WebBackendSoup::create_soup_message(const string &http_method,
                                body.c_str(), body.size());
     }
 
-  if (oauth_header != "")
+  map<string, string> headers;
+
+  for (FilterList::iterator i = filters.begin(); i != filters.end(); i++)
     {
-      soup_message_headers_append(message->request_headers, "Authorization", oauth_header.c_str());
+      string u = uri;
+      string b = body;
+      (*i)->filter_http_request(http_method, u, b, headers);
+    }
+  
+  for (map<string, string>::const_iterator i = headers.begin(); i != headers.end(); i++)
+    {
+      soup_message_headers_append(message->request_headers, i->first.c_str(), i->second.c_str());
     }
   
 	soup_message_set_flags(message, SOUP_MESSAGE_NO_REDIRECT);

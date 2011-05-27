@@ -26,9 +26,9 @@
 #include <boost/bind.hpp>
 
 #include "OAuth.hh"
-#include "OAuthException.hh"
+#include "OAuthWorkflow.hh"
 #include "WebBackendSoup.hh"
-#include "StringUtil.hh"
+#include "Uri.hh"
 #include "GDBusWrapper.hh"
 
 using namespace std;
@@ -229,19 +229,24 @@ UbuntuOneSSO::pair_oauth()
       // TODO: retrieve OAuth URL from Ubuntu.
       // TODO: Customize html
       backend = new WebBackendSoup();
-      oauth = new OAuth(backend,
-                        "https://one.ubuntu.com/oauth/request/",
-                        "https://one.ubuntu.com/oauth/authorize/",
-                        "https://one.ubuntu.com/oauth/access/", 
-                        "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
-                        "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
+      oauth = new OAuth();
 
+      backend->add_filter(oauth);
+      
+      OAuthWorkflow *workflow = new OAuthWorkflow(backend, oauth,
+                                                  "https://one.ubuntu.com/oauth/request/",
+                                                  "https://one.ubuntu.com/oauth/authorize/",
+                                                  "https://one.ubuntu.com/oauth/access/", 
+                                                  "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
+                                                  "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
+
+      
       OAuth::RequestParams parameters;
-      oauth->init("anyone", "anyone", parameters,
-                  boost::bind(&UbuntuOneSSO::on_oauth_success, this),
-                  boost::bind(&UbuntuOneSSO::on_oauth_failed, this));
+      workflow->init("anyone", "anyone",
+                     boost::bind(&UbuntuOneSSO::on_oauth_success, this),
+                     boost::bind(&UbuntuOneSSO::on_oauth_failed, this));
     }
-  catch (OAuthException &e)
+  catch (Exception &e)
     {
       failed_cb();
     }

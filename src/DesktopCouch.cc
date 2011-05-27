@@ -24,12 +24,12 @@
 
 #include <sstream>
 #include <boost/bind.hpp>
+#include <boost/algorithm/string.hpp>
 #include <glib.h>
 
 #include "OAuth.hh"
-#include "OAuthException.hh"
 #include "Secrets.hh"
-#include "StringUtil.hh"
+#include "Uri.hh"
 
 using namespace std;
 
@@ -77,12 +77,12 @@ void
 DesktopCouch::on_secret_success(const string &secret)
 {
   vector<string> elements;
-  StringUtil::split(secret, ':', elements);
-
+  boost::split(elements, secret, boost::is_any_of(":"));
+  
   if (elements.size() == 4)
     {
-      OAuth::RequestParams parameters;
-      oauth->init(elements[0], elements[1], elements[2], elements[3], parameters);
+      oauth->set_consumer(elements[0], elements[1]);
+      oauth->set_token(elements[2], elements[3]);
       check_readiness();
     }
   else

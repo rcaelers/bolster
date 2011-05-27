@@ -16,29 +16,17 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef OAUTHEXCEPTION_HH
-#define OAUTHEXCEPTION_HH
+#ifndef IHTTPREQUESTFILTER_HH
+#define IHTTPREQUESTFILTER_HH
 
 #include <string>
-#include "Exception.hh"
+#include <map>
 
-class OAuthException : public Exception
-
+class IHttpRequestFilter
 {
 public:
-  explicit OAuthException()
-    : Exception()
-  {
-  }
-
-  explicit OAuthException(const std::string &detail)
-    : Exception(detail)
-  {
-  }
-
-  virtual ~OAuthException() throw()
-  {
-  }
+  virtual bool filter_http_request(const std::string &http_method, std::string &uri, std::string &body,
+                                   std::map<std::string, std::string> &headers) = 0;
 };
 
-#endif // OAUTHEXCEPTION_HH
+#endif

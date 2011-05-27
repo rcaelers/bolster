@@ -25,8 +25,8 @@
 #include <boost/bind.hpp>
 #include "json/json.h"
 
+#include "IWebBackend.hh"
 #include "OAuth.hh"
-#include "OAuthException.hh"
 #include "UbuntuOneSSO.hh"
 
 using namespace std;
@@ -62,12 +62,12 @@ void
 UbuntuOneCouch::on_pairing_success(const string &consumer_key, const string &consumer_secret,
                                    const string &token_key, const string &token_secret)
 {
-  OAuth::RequestParams parameters;
-  oauth->init(consumer_key, consumer_secret, token_key, token_secret, parameters);
+  oauth->set_consumer(consumer_key, consumer_secret);
+  oauth->set_token(token_key, token_secret);
 
   // TODO: use 'resp'
   string response;
-  int resp = oauth->request("GET", "https://one.ubuntu.com/api/account/", "", response);
+  int resp = backend->request("GET", "https://one.ubuntu.com/api/account/", "", response);
   
   Json::Value root;
   Json::Reader reader;

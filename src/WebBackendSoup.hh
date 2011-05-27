@@ -21,6 +21,7 @@
 
 #include <string>
 #include <map>
+#include <list>
 
 #ifdef HAVE_GNOME
 #include <libsoup/soup-gnome.h>
@@ -32,23 +33,25 @@
 #include "FunctionWrappers.hh"
 
 class OAuth;
+class IHttpRequestFilter;
 
 class WebBackendSoup : public IWebBackend
 {
 public:
  	WebBackendSoup();
   virtual ~WebBackendSoup();
+
+  virtual void add_filter(IHttpRequestFilter *filter);
+  virtual void remove_filter(IHttpRequestFilter *filter);
   
   virtual int request(const std::string &http_method,
                       const std::string &uri,
                       const std::string &body,
-                      const std::string &oauth_header,
                       std::string &response_body);
   
   virtual void request(const std::string &http_method,
                        const std::string &uri,
                        const std::string &body,
-                       const std::string &oauth_header,
                        const WebReplyCallback callback);
   
   virtual void listen(const WebRequestCallback callback,
@@ -90,16 +93,18 @@ private:
 
   SoupMessage *create_soup_message(const std::string &http_method,
                                    const std::string &uri,
-                                   const std::string &body,
-                                   const std::string &oauth_header);
+                                   const std::string &body);
 
 private:
   SoupSession *sync_session;
   SoupSession *async_session;
   SoupURI *proxy;
 
-  typedef std::map<std::string, ServerData*> Servers;
-  Servers servers;
+  typedef std::map<std::string, ServerData*> ServerList;
+  typedef std::list<IHttpRequestFilter*> FilterList;
+  
+  ServerList servers;
+  FilterList filters;
 };
 
 #endif

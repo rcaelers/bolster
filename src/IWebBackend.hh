@@ -23,6 +23,7 @@
 #include <boost/function.hpp>
 
 class OAuth;
+class IHttpRequestFilter;
 
 class IWebBackend
 {
@@ -33,17 +34,18 @@ public:
 
 public:
   virtual ~IWebBackend() {}
+
+  virtual void add_filter(IHttpRequestFilter *filter) = 0;
+  virtual void remove_filter(IHttpRequestFilter *filter) = 0;
   
   virtual int request(const std::string &http_method,
                       const std::string &uri,
                       const std::string &body,
-                      const std::string &oauth_header,
                       std::string &response_body) = 0;
   
   virtual void request(const std::string &http_method,
                        const std::string &uri,
                        const std::string &body,
-                       const std::string &oauth_header,
                        const WebReplyCallback callback) = 0;
   
   virtual void listen(const WebRequestCallback callback,

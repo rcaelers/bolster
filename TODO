@@ -25,7 +25,7 @@
 ** DONE [#B] Add custom OAuth headers (e.g. Realm)
 ** DONE [#B] Test with Ubuntu One
 ** DONE [#C] Remove string message from result callback 
-** TODO [#A] Split into core oauth & negotiate
+** DONE [#A] Split into core oauth & negotiate
 
 * WebBackend
 
@@ -34,7 +34,6 @@
 ** DONE [#B] Add Content type to API
 ** DONE [#B] Allow custom body return in server
 ** TODO [#D] Proxy support
-** TODO [#C] Delegate escaping to IWebBackend
 ** DONE [#B] Add stop listen.
 ** DONE [#D] Allow listening for multiple paths
 ** DONE [#B] Refactor Soup -> C++ callbacks

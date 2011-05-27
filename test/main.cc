@@ -14,6 +14,10 @@
 
 #include "Database.hh"
 #include "Settings.hh"
+#include "IWebBackend.hh"
+#include "WebBackendSoup.hh"
+#include "OAuth.hh"
+#include "OAuthWorkflow.hh"
 
 using namespace std;
 
@@ -146,6 +150,14 @@ void run2(ICouchDB *couch)
   
 }
 
+void result_ok()
+{
+}
+
+void result_nok()
+{
+}
+
 int main(int argc, char **argv)
 {
   (void) argc;
@@ -154,28 +166,34 @@ int main(int argc, char **argv)
   g_type_init();
 
 
-  // IWebBackend *backend = new WebBackendSoup();
-  // web = new OAuth(backend,
-  //                 "http://127.0.0.1:8888/couch/request_token/",
-  //                 "http://127.0.0.1:8888/couch/authorize/",
-  //                 "http://127.0.0.1:8888/couch/access_token/",
-  //                 "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
-  //                 "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
-  // 
-  // OAuth::RequestParams parameters;
-  // web->init("Hello", "World", parameters, &result);
+  IWebBackend *backend = new WebBackendSoup();
+  OAuth *oauth = new OAuth();
 
-  for (int i = 0; i < 1000; i ++)
-    {
-      loop = g_main_loop_new(NULL, TRUE);
+  backend->add_filter(oauth);
+
+  OAuthWorkflow *workflow = new OAuthWorkflow(backend, oauth,
+                                              "http://127.0.0.1:8888/oauth/request_token/",
+                                              "http://127.0.0.1:8888/oauth/authorize/",
+                                              "http://127.0.0.1:8888/oauth/access_token/",
+                                              "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
+                                              "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
+  
+  workflow->init("Hello", "World", &result_ok, &result_nok);
+
+  loop = g_main_loop_new(NULL, TRUE);
+  g_main_loop_run(loop);
+  
+  // for (int i = 0; i < 1000; i ++)
+  //   {
+  //     loop = g_main_loop_new(NULL, TRUE);
       
-      ICouchDB *c = CouchDBFactory::create(CouchDBFactory::Desktop);
-      c->signal_ready.connect(boost::bind(run2, c));
-      c->init();
+  //     ICouchDB *c = CouchDBFactory::create(CouchDBFactory::Desktop);
+  //     c->signal_ready.connect(boost::bind(run2, c));
+  //     c->init();
       
-      g_main_loop_run(loop);
-      g_main_loop_unref(loop);
+  //     g_main_loop_run(loop);
+  //     g_main_loop_unref(loop);
       
-      delete c;
-    }
+  //     delete c;
+  //   }
 }

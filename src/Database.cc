@@ -29,7 +29,7 @@
 
 #include "ICouchDB.hh"
 #include "Document.hh"
-#include "StringUtil.hh"
+#include "Uri.hh"
 #include "Registry.hh"
 
 using namespace std;
@@ -51,7 +51,7 @@ Database::create()
 {
   string out;
   couch->request("PUT",
-                 boost::str(boost::format("/%1%") % StringUtil::escape(database_name)),
+                 boost::str(boost::format("/%1%") % Uri::escape(database_name)),
                  "", out);
 }
 
@@ -61,7 +61,7 @@ Database::destroy()
 {
   string out;
   couch->request("DELETE",
-                 boost::str(boost::format("/%1%") % StringUtil::escape(database_name)),
+                 boost::str(boost::format("/%1%") % Uri::escape(database_name)),
                  "", out);
 }
 
@@ -75,13 +75,13 @@ Database::put(Document *doc)
   if (id != "")
     {
       couch->request("PUT",
-                     boost::str(boost::format("/%1%/%2%") % StringUtil::escape(database_name) % StringUtil::escape(id)),
+                     boost::str(boost::format("/%1%/%2%") % Uri::escape(database_name) % Uri::escape(id)),
                      doc->str(), out);
     }
   else
     {
       couch->request("POST",
-                     boost::str(boost::format("/%1%/") % StringUtil::escape(database_name)),
+                     boost::str(boost::format("/%1%/") % Uri::escape(database_name)),
                      doc->str(), out);
 
     }
@@ -111,9 +111,9 @@ Database::remove(Document *doc)
   
   couch->request("DELETE",
                  boost::str(boost::format("/%1%/%2%?rev=%3%")
-                            % StringUtil::escape(database_name)
-                            % StringUtil::escape(id)
-                            % StringUtil::escape(rev)), "", out);
+                            % Uri::escape(database_name)
+                            % Uri::escape(id)
+                            % Uri::escape(rev)), "", out);
 }
 
 
@@ -123,7 +123,7 @@ Database::get(const std::string &id)
   string out;
 
   couch->request("GET",
-                 boost::str(boost::format("%1%/%2%") % StringUtil::escape(database_name) % StringUtil::escape(id)),
+                 boost::str(boost::format("%1%/%2%") % Uri::escape(database_name) % Uri::escape(id)),
                  "", out);
 
   Document *doc = NULL;
