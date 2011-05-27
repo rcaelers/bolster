@@ -34,10 +34,10 @@
 ** DONE [#B] Add Content type to API
 ** DONE [#B] Allow custom body return in server
 ** TODO [#D] Proxy support
-** TODO [#B] Delegate escaping to IWebBackend
-** TODO [#B] Add stop listen.
-** TODO [#D] Allow listening for multiple paths
-** TODO [#B] Refactor Soup -> C++ callbacks
+** TODO [#C] Delegate escaping to IWebBackend
+** DONE [#B] Add stop listen.
+** DONE [#D] Allow listening for multiple paths
+** DONE [#B] Refactor Soup -> C++ callbacks
 
 
 * Couch

@@ -285,7 +285,7 @@ OAuth::encrypt(const string &input, const string &key) const
   base64.MessageSeriesEnd();
   
   unsigned int size = (sizeof(digest) + 2 - ((sizeof(digest) + 2) % 3)) * 4 / 3;
-  uint8_t* encoded_values = new uint8_t[size + 1];
+  uint8_t* encoded_values = new uint8_t[size + 1]; // TODO: leak
   
   base64.Get(encoded_values, size);
   encoded_values[size] = 0;

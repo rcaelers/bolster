@@ -84,26 +84,20 @@ WebBackendSoup::request(const string &http_method,
 void
 WebBackendSoup::request(const string &http_method, const string &uri, const string &body, const string &oauth_header, WebReplyCallback callback)
 {
-  AsyncReplyForwarder *forwarder = new AsyncReplyForwarder(this, &WebBackendSoup::client_callback, callback);
-  
   if (async_session == NULL)
     {
       init_async();
     }
 
   SoupMessage *message = create_soup_message(http_method, uri, body, oauth_header);
-  soup_session_queue_message(async_session, message,
-                             AsyncReplyForwarder::dispatch, forwarder);
+  AsyncReplyForwarder *forwarder = new AsyncReplyForwarder(this, &WebBackendSoup::client_callback, callback);
+  soup_session_queue_message(async_session, message, AsyncReplyForwarder::dispatch, forwarder);
 }
 
 
 void
 WebBackendSoup::listen(WebRequestCallback callback, const string &path, int &port)
 {
-  AsyncRequestForwarder *forwarder = new AsyncRequestForwarder(this, &WebBackendSoup::server_callback, callback);
-  forwarder->set_once();
-
-  
   SoupAddress *addr = soup_address_new("127.0.0.1", SOUP_ADDRESS_ANY_PORT);
   soup_address_resolve_sync(addr, NULL);
 
@@ -120,12 +114,16 @@ WebBackendSoup::listen(WebRequestCallback callback, const string &path, int &por
   port = soup_server_get_port(server);
   g_debug("Listening on %d", port);
 
-  soup_server_add_handler(server, path.c_str(), AsyncRequestForwarder::dispatch, forwarder, NULL);
-	soup_server_run_async(server);
+  AsyncRequestForwarder *forwarder = new AsyncRequestForwarder(this, &WebBackendSoup::server_callback, callback);
+  forwarder->set_once();
 
   ServerData *data = new ServerData(server, forwarder);
   servers[path] = data;
+  
+  soup_server_add_handler(server, path.c_str(), AsyncRequestForwarder::dispatch, forwarder, NULL);
+	soup_server_run_async(server);
 }
+
 
 void
 WebBackendSoup::stop_listen(const std::string &path)
@@ -137,6 +135,7 @@ WebBackendSoup::stop_listen(const std::string &path)
       servers.erase(path);
     }
 }
+
 
 void
 WebBackendSoup::init_async()
@@ -216,12 +215,12 @@ WebBackendSoup::create_soup_message(const string &http_method,
   return message;
 }
 
+
 void
 WebBackendSoup::server_callback(SoupServer *, SoupMessage *message, const char *path,
                                 GHashTable *query, SoupClientContext *context,
-                                WebRequestCallback cb)
+                                WebRequestCallback callback)
 {
-  
   (void) path;
   (void) context;
   (void) query;
@@ -229,24 +228,21 @@ WebBackendSoup::server_callback(SoupServer *, SoupMessage *message, const char *
   SoupURI *uri = soup_message_get_uri(message);
   string response_query = (uri != NULL && uri->query != NULL) ? uri->query : "";
   string response_body = (message->response_body->length > 0) ? message->response_body->data : "";
-
   string content_type;
   string reply;
 
-  cb(message->method, response_query, response_body, content_type, reply);
+  callback(message->method, response_query, response_body, content_type, reply);
 
-  g_debug("reply %s %s", reply.c_str(), content_type.c_str());
   soup_message_set_status(message, SOUP_STATUS_OK);
   soup_message_set_response(message, content_type.c_str(), SOUP_MEMORY_COPY, reply.c_str(), reply.length());
 }
 
+
 void
-WebBackendSoup::client_callback(SoupSession *session, SoupMessage *message, WebReplyCallback cb)
+WebBackendSoup::client_callback(SoupSession *session, SoupMessage *message, WebReplyCallback callback)
 {
-  string response_body = (message->response_body->length > 0) ? message->response_body->data : "";
-
   (void)session;
-  
-  cb(message->status_code, response_body);
-}
 
+  string response_body = (message->response_body->length > 0) ? message->response_body->data : "";
+  callback(message->status_code, response_body);
+}

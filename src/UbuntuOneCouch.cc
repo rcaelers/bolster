@@ -79,8 +79,6 @@ UbuntuOneCouch::on_pairing_success(const string &consumer_key, const string &con
 
   g_debug("response: %d %s", resp, response.c_str());
 
-	GError *error;
-
   Json::Value root;
   Json::Reader reader;
   bool json_ok = reader.parse(response, root);
