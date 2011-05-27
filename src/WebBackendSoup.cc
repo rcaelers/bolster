@@ -84,7 +84,7 @@ WebBackendSoup::request(const string &http_method,
 void
 WebBackendSoup::request(const string &http_method, const string &uri, const string &body, const string &oauth_header, WebReplyCallback callback)
 {
-  AsyncReplyForwarder *fwd = new AsyncReplyForwarder(this, &WebBackendSoup::client_callback, callback);
+  AsyncReplyForwarder *forwarder = new AsyncReplyForwarder(this, &WebBackendSoup::client_callback, callback);
   
   if (async_session == NULL)
     {
@@ -93,15 +93,17 @@ WebBackendSoup::request(const string &http_method, const string &uri, const stri
 
   SoupMessage *message = create_soup_message(http_method, uri, body, oauth_header);
   soup_session_queue_message(async_session, message,
-                             AsyncReplyForwarder::dispatch, fwd);
+                             AsyncReplyForwarder::dispatch, forwarder);
 }
 
 
 void
 WebBackendSoup::listen(WebRequestCallback callback, const string &path, int &port)
 {
-  AsyncRequestForwarder *fwd = new AsyncRequestForwarder(this, &WebBackendSoup::server_callback, callback);
+  AsyncRequestForwarder *forwarder = new AsyncRequestForwarder(this, &WebBackendSoup::server_callback, callback);
+  forwarder->set_once();
 
+  
   SoupAddress *addr = soup_address_new("127.0.0.1", SOUP_ADDRESS_ANY_PORT);
   soup_address_resolve_sync(addr, NULL);
 
@@ -114,14 +116,15 @@ WebBackendSoup::listen(WebRequestCallback callback, const string &path, int &por
     {
       throw WebBackendException("Cannot receive incoming connections.");
     }
-
+  
   port = soup_server_get_port(server);
   g_debug("Listening on %d", port);
 
-  soup_server_add_handler(server, path.c_str(), AsyncRequestForwarder::dispatch, fwd, NULL);
+  soup_server_add_handler(server, path.c_str(), AsyncRequestForwarder::dispatch, forwarder, NULL);
 	soup_server_run_async(server);
 
-  servers[path] = server;
+  ServerData *data = new ServerData(server, forwarder);
+  servers[path] = data;
 }
 
 void
@@ -129,8 +132,8 @@ WebBackendSoup::stop_listen(const std::string &path)
 {
   if (servers.find(path) != servers.end())
     {
-      SoupServer *server = servers[path];
-      g_object_unref(server);
+      ServerData *data = servers[path];
+      delete data;
       servers.erase(path);
     }
 }

@@ -49,27 +49,39 @@ class FunctionForwarder<Ret (T::*) (Args...), CRet (*) (CArgs...), index, ExtraA
 public:
   typedef Ret (T::*FuncType)(Args...);
   
-  FunctionForwarder(T *object, FuncType func, ExtraArgs... extra_args) : object(object), func(func)
+  FunctionForwarder(T *object, FuncType func, ExtraArgs... extra_args) : object(object), func(func), once(false)
   {
     std::tuple<ExtraArgs...> tuple(extra_args...);
     extra = tuple;
   }
+
+  void set_once(bool once = true)
+  {
+    this->once = once;
+  }
   
   static CRet dispatch(CArgs... args)
   {
+    std::tuple<CArgs...> tuple(args...);
+    FunctionForwarder *t = (FunctionForwarder *) std::get<index - 1>(tuple);
+    std::tuple<CArgs..., ExtraArgs...> xtuple = tuple_cat(tuple, t->extra);
+
     try
       {
-        std::tuple<CArgs...> tuple(args...);
-        FunctionForwarder * t = (FunctionForwarder *) std::get<index - 1>(tuple);
+        T *object = t->object;
+        FuncType func = t->func;
 
-        std::tuple<CArgs..., ExtraArgs...> xtuple = tuple_cat(tuple, t->extra);
-
-        return TupleDispatcher<sizeof...(CArgs) + sizeof...(ExtraArgs), index>::dispatch(t->object, t->func, xtuple);
+        if (t->once)
+          {
+            delete t;
+          }
+        
+        return TupleDispatcher<sizeof...(CArgs) + sizeof...(ExtraArgs), index>::dispatch(object, func, xtuple);
       }
     catch (std::exception &e)
       {
       }
-
+    
     return CRet();
   }
   
@@ -77,4 +89,5 @@ private:
   T *object;
   FuncType func;
   std::tuple<ExtraArgs...> extra;
+  bool once;
 };

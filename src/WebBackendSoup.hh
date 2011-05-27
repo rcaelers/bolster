@@ -63,6 +63,24 @@ private:
   
   typedef FunctionForwarder<AsyncReply, SoupSessionCallback, 3, WebReplyCallback> AsyncReplyForwarder;
   typedef FunctionForwarder<AsyncRequest, SoupServerCallback, 6, WebRequestCallback> AsyncRequestForwarder;
+
+  class ServerData
+  {
+  public:
+    ServerData(SoupServer *server, AsyncRequestForwarder *forwarder) : server(server), forwarder(forwarder)
+    {
+    }
+
+    ~ServerData()
+    {
+      g_object_unref(server);
+      delete forwarder;
+    }
+
+  private:
+    SoupServer *server;
+    AsyncRequestForwarder *forwarder;
+  };
   
   void server_callback(SoupServer *server, SoupMessage *msg, const char *path, GHashTable *query, SoupClientContext *context, WebRequestCallback cb);
   void client_callback(SoupSession *session, SoupMessage *message, WebReplyCallback cb);
@@ -80,7 +98,7 @@ private:
   SoupSession *async_session;
   SoupURI *proxy;
 
-  typedef std::map<std::string, SoupServer*> Servers;
+  typedef std::map<std::string, ServerData*> Servers;
   Servers servers;
 };
 
