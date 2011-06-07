@@ -37,8 +37,31 @@ using namespace std;
 
 UbuntuOneSSO::UbuntuOneSSO()
   : proxy(NULL),
-    oauth(NULL)
+    handler_id(0),
+    oauth(NULL),
+    workflow(NULL),
+    backend(NULL)
 {
+  // TODO: Make HTML response customisable
+  oauth_settings.success_html = 
+    "<html>"
+    "<head><title>Authorization</title></head>"
+    "<body><h1>Authorization OK</h1></body>"
+    "</html>";
+  
+  oauth_settings.failure_html =
+    "<html>"
+    "<head><title>Authorization</title></head>"
+    "<body><h1>Authorization FAILED</h1></body>"
+    "</html>";
+
+  // TODO: retrieve OAuth URLs from Ubuntu.
+  oauth_settings.temporary_request_uri = "https://one.ubuntu.com/oauth/request/";
+  oauth_settings.authorize_uri = "https://one.ubuntu.com/oauth/authorize/";
+  oauth_settings.token_request_uri = "https://one.ubuntu.com/oauth/access/";
+
+  // TODO: Customize help text.
+  sso_help_text = "Workrave wants to access you Ubuntu One account";
 }
 
 
@@ -52,6 +75,16 @@ UbuntuOneSSO::~UbuntuOneSSO()
   if (oauth != NULL)
     {
       delete oauth;
+    }
+
+  if (workflow != NULL)
+    {
+      delete workflow;
+    }
+
+  if (backend != NULL)
+    {
+      delete backend;
     }
 }
 
@@ -205,8 +238,7 @@ UbuntuOneSSO::pair_sso()
   GVariantBuilder b;
   
   g_variant_builder_init(&b, G_VARIANT_TYPE("a{ss}"));
-  // TODO: Customize help text.
-  g_variant_builder_add(&b, "{ss}", "help_text", "Workrave wants to access you Ubuntu One account");
+  g_variant_builder_add(&b, "{ss}", "help_text", sso_help_text.c_str());
 
   g_dbus_proxy_call_sync(proxy,
                          "register",
@@ -228,20 +260,11 @@ UbuntuOneSSO::pair_oauth()
 {
   try
     {
-      // TODO: retrieve OAuth URL from Ubuntu.
-      // TODO: Customize html
       backend = new WebBackendSoup();
       oauth = new OAuth();
+      workflow = new OAuthWorkflow(backend, oauth, oauth_settings);
 
       backend->add_filter(oauth);
-      
-      OAuthWorkflow *workflow = new OAuthWorkflow(backend, oauth,
-                                                  "https://one.ubuntu.com/oauth/request/",
-                                                  "https://one.ubuntu.com/oauth/authorize/",
-                                                  "https://one.ubuntu.com/oauth/access/", 
-                                                  "<html><head><title>Authorization Ok</title></head><body><div><h1>Authorization Ok</h1>OK</div></body></html>",
-                                                  "<html><head><title>Failed to authorize</title></head><body><div><h1>Failed to authorize</h1>Sorry</div></body></html>");
-
       
       OAuth::RequestParams parameters;
       workflow->init("anyone", "anyone",

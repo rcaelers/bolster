@@ -26,9 +26,10 @@
 #include <gio/gio.h>
 #include <boost/function.hpp>
 
-class OAuth;
 class IWebBackend;
+class OAuthWorkflow;
 
+#include "OAuthWorkflow.hh"
 #include "Exception.hh"
 
 class UbuntuOneSSO
@@ -58,9 +59,13 @@ private:
 private:  
   GDBusProxy *proxy;
   OAuth *oauth;
+  OAuthWorkflow *workflow;
   IWebBackend *backend;
   PairingSuccessCallback success_cb;
   PairingFailedCallback failed_cb;
+  OAuthWorkflow::Settings oauth_settings;
+  std::string sso_help_text;
 };
+
   
 #endif

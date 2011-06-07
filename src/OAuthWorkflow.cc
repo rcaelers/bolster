@@ -46,18 +46,10 @@ using namespace std;
 
 OAuthWorkflow::OAuthWorkflow(IWebBackend *backend,
                              OAuth *oauth,
-                             const string &temporary_request_uri,
-                             const string &authorize_uri,
-                             const string &token_request_uri,
-                             const string &success_html,
-                             const string &failure_html)
+                             const OAuthWorkflow::Settings &settings)
   : backend(backend),
     oauth(oauth),
-    temporary_request_uri(temporary_request_uri),
-    authorize_uri(authorize_uri),
-    token_request_uri(token_request_uri),
-    success_html(success_html),
-    failure_html(failure_html)
+    settings(settings)
 {
   verified_path = "/oauth-verfied";
 }
@@ -94,7 +86,7 @@ OAuthWorkflow::request_temporary_credentials()
       parameters["oauth_callback"] = boost::str(boost::format("http://127.0.0.1:%1%%2%") % port % verified_path);
       oauth->set_custom_headers(parameters);
 
-      backend->request("POST", temporary_request_uri, "",
+      backend->request("POST", settings.temporary_request_uri, "",
                        boost::bind(&OAuthWorkflow::on_temporary_credentials_ready, this, _1, _2));
     }
   catch(Exception)
@@ -156,7 +148,7 @@ OAuthWorkflow::request_resource_owner_authorization()
         }
 
       string command = boost::str(boost::format("%1% %2%?oauth_token=%3%")
-                                  % program % authorize_uri % Uri::escape(token));
+                                  % program % settings.authorize_uri % Uri::escape(token));
  
       gint exit_code;
       GError *error = NULL;
@@ -188,7 +180,7 @@ OAuthWorkflow::on_resource_owner_authorization_ready(const string &method, const
   try
     {
       response_content_type = "text/html";
-      response_body = failure_html;
+      response_body = settings.failure_html;
       
       if (method != "GET")
         {
@@ -220,7 +212,7 @@ OAuthWorkflow::on_resource_owner_authorization_ready(const string &method, const
           throw Exception();
         }
       
-      response_body = success_html;
+      response_body = settings.success_html;
       request_token(verifier);
     }
   catch(Exception &we)
@@ -239,7 +231,7 @@ OAuthWorkflow::request_token(const string &verifier)
       parameters["oauth_verifier"] = verifier;
       oauth->set_custom_headers(parameters);
 
-      backend->request("POST", token_request_uri, "",
+      backend->request("POST", settings.token_request_uri, "",
                        boost::bind(&OAuthWorkflow::on_token_ready, this, _1, _2));
     }
   catch(Exception &we)

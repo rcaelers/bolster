@@ -35,15 +35,37 @@ public:
   typedef boost::function<void () > FailedCallback;
 
   typedef IWebBackend::WebReplyCallback WebReplyCallback;
-  
+
+  struct Settings
+  {
+    Settings()
+    {
+    }
+    
+    Settings(const std::string &temporary_request_uri,
+             const std::string &authorize_uri,
+             const std::string &token_request_uri,
+             const std::string &success_html,
+             const std::string &failure_html)
+      : temporary_request_uri(temporary_request_uri),
+        authorize_uri(authorize_uri),
+        token_request_uri(token_request_uri),
+        success_html(success_html),
+        failure_html(failure_html)
+    {
+    }
+    
+    std::string temporary_request_uri;
+    std::string authorize_uri;
+    std::string token_request_uri;
+    std::string success_html;
+    std::string failure_html;
+  };
+   
 public:
  	OAuthWorkflow(IWebBackend *backend,
                 OAuth *oauth,
-                const std::string &temporary_request_uri = "",
-                const std::string &authorize_uri = "",
-                const std::string &token_request_uri = "",
-                const std::string &success_html = "",
-                const std::string &failure_html= "");
+                const Settings &settings);
   ~OAuthWorkflow();
   
   void init(const std::string &consumer_key,
@@ -69,6 +91,7 @@ private:
 private:  
   IWebBackend *backend;
   OAuth *oauth;
+  Settings settings;
 
   std::string token;
   
@@ -76,11 +99,6 @@ private:
   FailedCallback failure_cb;
   
   std::string verified_path;
-  std::string temporary_request_uri;
-  std::string authorize_uri;
-  std::string token_request_uri;
-  std::string success_html;
-  std::string failure_html;
 };
 
 #endif
