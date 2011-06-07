@@ -23,4 +23,7 @@ target_link_libraries(couch_test ${ALLLIBS} couch)
 add_executable(wrap_test wraptest.cc)
 #target_link_libraries(wrap_test ${ALLLIBS} couch)
 
+add_executable(u1_test u1.cc)
+target_link_libraries(u1_test ${ALLLIBS} couch)
+
 include_directories(../src)
