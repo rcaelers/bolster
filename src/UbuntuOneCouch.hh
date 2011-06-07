@@ -38,7 +38,8 @@ public:
 private:
   void on_pairing_success(const std::string &, const std::string &, const std::string &, const std::string &);
   void on_pairing_failed();
-
+  void cleanup();
+  
   UbuntuOneSSO *sso;
 };
   

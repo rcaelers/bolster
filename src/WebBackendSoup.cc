@@ -105,6 +105,7 @@ WebBackendSoup::request(const string &http_method, const string &uri, const stri
 
   SoupMessage *message = create_soup_message(http_method, uri, body);
   AsyncReplyForwarder *forwarder = new AsyncReplyForwarder(this, &WebBackendSoup::client_callback, callback);
+  forwarder->set_once();
   soup_session_queue_message(async_session, message, AsyncReplyForwarder::dispatch, forwarder);
 }
 
@@ -129,7 +130,6 @@ WebBackendSoup::listen(WebRequestCallback callback, const string &path, int &por
   g_debug("Listening on %d", port);
 
   AsyncRequestForwarder *forwarder = new AsyncRequestForwarder(this, &WebBackendSoup::server_callback, callback);
-  forwarder->set_once();
 
   ServerData *data = new ServerData(server, forwarder);
   servers[path] = data;
@@ -267,4 +267,5 @@ WebBackendSoup::client_callback(SoupSession *session, SoupMessage *message, WebR
 
   string response_body = (message->response_body->length > 0) ? message->response_body->data : "";
   callback(message->status_code, response_body);
+	g_object_unref(message);
 }

@@ -67,7 +67,12 @@ UbuntuOneSSO::UbuntuOneSSO()
 
 UbuntuOneSSO::~UbuntuOneSSO()
 {
-  if (proxy != NULL)
+  if (g_signal_handler_is_connected(G_OBJECT(proxy), handler_id))
+    {
+      g_signal_handler_disconnect(G_OBJECT(proxy), handler_id);
+    }
+  
+ if (proxy != NULL)
     {
       g_object_unref(proxy);
     }
@@ -103,12 +108,12 @@ UbuntuOneSSO::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_nam
   (void) proxy;
   (void) sender_name;
   
-  char *app_name = NULL;
   map<string, string> info;
   
   if (string(signal_name) == "CredentialsFound" ||
       string(signal_name) == "CredentialsError")
     {
+      char *app_name = NULL;
       GVariant *dict = NULL;
       g_variant_get(parameters, "(&s@a{ss})", &app_name, &dict);
 
@@ -122,8 +127,14 @@ UbuntuOneSSO::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_nam
             {
               info[key] = value;
             }
+          g_free(key);
+          g_free(value);
         }
+
+      g_free(app_name);
+      g_variant_unref(dict);
     }
+  
   if (string(signal_name) == "CredentialsFound")
     {
       on_credentials_success(info);
@@ -132,8 +143,6 @@ UbuntuOneSSO::on_signal(GDBusProxy *proxy, gchar *sender_name, gchar *signal_nam
     {
       on_credentials_failed();
     }
-
-  // FIXME: free dict & app_name?
 }
 
 
@@ -223,10 +232,10 @@ UbuntuOneSSO::init_sso()
                                         &error);
   if (proxy != NULL)
     {
-      g_signal_connect (proxy,
-                        "g-signal",
-                        G_CALLBACK(&UbuntuOneSSO::on_signal_static),
-                        this);
+      handler_id = g_signal_connect(proxy,
+                                    "g-signal",
+                                    G_CALLBACK(&UbuntuOneSSO::on_signal_static),
+                                    this);
     }
 }
 
@@ -247,6 +256,7 @@ UbuntuOneSSO::pair_sso()
                          -1,
                          NULL,
                          &error);
+  
   if (error != NULL)
     {
       g_error_free(error);

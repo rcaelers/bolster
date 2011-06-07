@@ -61,12 +61,21 @@ UbuntuOneCouch::init()
 
 
 void
+UbuntuOneCouch::cleanup()
+{
+  delete sso;
+  sso = NULL;
+}
+
+void
 UbuntuOneCouch::on_pairing_success(const string &consumer_key, const string &consumer_secret,
                                    const string &token_key, const string &token_secret)
 {
+  cleanup();
+  
   oauth->set_consumer(consumer_key, consumer_secret);
   oauth->set_token(token_key, token_secret);
-
+  
   // TODO: use 'resp'
   string response;
   int resp = backend->request("GET", "https://one.ubuntu.com/api/account/", "", response);
@@ -100,5 +109,6 @@ UbuntuOneCouch::on_pairing_success(const string &consumer_key, const string &con
 void
 UbuntuOneCouch::on_pairing_failed()
 {
+  cleanup();
   failure();
 }

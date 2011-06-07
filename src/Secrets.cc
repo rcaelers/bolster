@@ -235,6 +235,8 @@ Secrets::Service::unlock(const ItemList &locked, ItemList &unlocked, UnlockedCal
       callback(unlocked);
     }
   
+  g_variant_iter_free(unlocked_iter);
+  g_free(prompt_path);
   g_variant_unref(result);
 }
 

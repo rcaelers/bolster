@@ -58,6 +58,7 @@ private:
 
 private:  
   GDBusProxy *proxy;
+  int handler_id;
   OAuth *oauth;
   OAuthWorkflow *workflow;
   IWebBackend *backend;
