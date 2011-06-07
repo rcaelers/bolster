@@ -63,11 +63,8 @@ public:
   virtual void stop_listen(const std::string &path);
   
 private:
-  typedef void (WebBackendSoup::*AsyncRequest)(SoupServer *, SoupMessage *, const char *, GHashTable *, SoupClientContext *, WebRequestCallback);
-  typedef void (WebBackendSoup::*AsyncReply)(SoupSession *, SoupMessage *, WebReplyCallback);
-  
-  typedef FunctionForwarder<AsyncReply, SoupSessionCallback, 3, WebReplyCallback> AsyncReplyForwarder;
-  typedef FunctionForwarder<AsyncRequest, SoupServerCallback, 6, WebRequestCallback> AsyncRequestForwarder;
+  typedef FunctionForwarder<WebBackendSoup, SoupSessionCallback, 3, WebReplyCallback> AsyncReplyForwarder;
+  typedef FunctionForwarder<WebBackendSoup, SoupServerCallback, 6, WebRequestCallback> AsyncRequestForwarder;
 
   class ServerData
   {

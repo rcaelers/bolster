@@ -5,21 +5,21 @@
 
 using namespace std;
 
-typedef int (* callback_t)(int, const char *, int, void *);
+typedef int (* callback_t)(int, const char *, int, void *, char);
 
 class Bar
 {
 public:
-  int foo(int a, const char *b, int c, string extra1, string extra2)
+  int foo(int a, const char *b, int c, char d, string extra1, string extra2)
   {
-    cout << a << " " << b << " " << c << " " << extra1 << " " << extra2 << endl;
+    cout << a << " " << b << " " << c << " " << d << " " << extra1 << " " << extra2 << endl;
     return 42;
    }
 };
   
 void perform_c_callback(callback_t cb, void *userdata)
 {
-  int ret = cb(1, "pietje", 2, userdata);
+  int ret = cb(1, "pietje", 2, userdata, 'x');
   cout << "ret = " << ret << endl;
 }
 
@@ -30,14 +30,11 @@ int main(int argc, char **argv)
   
   Bar bar;
 
-  typedef FunctionForwarder<decltype(&Bar::foo), callback_t, 4, std::string,std::string> BarfooWrapper;
+  typedef FunctionForwarder<Bar, callback_t, 4, std::string, std::string> BarFooWrapper;
   
-  BarfooWrapper w(&bar, &Bar::foo, string("hello"), string("world"));
+  BarFooWrapper wrap(&bar, &Bar::foo, string("hello"), string("world"));
   
-  perform_c_callback(BarfooWrapper::dispatch, (void *)&w);
+  perform_c_callback(BarFooWrapper::dispatch, (void *)&wrap);
 
-  TypeGenerator<4, Bar, callback_t, std::string, std::string>::Type t;
-
-  t = &Bar::foo;
   return 0;
 }

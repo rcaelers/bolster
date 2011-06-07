@@ -101,14 +101,14 @@ struct TupleDispatcher<0, SkipIndex>
 };
 
 
-template<typename F, typename G, int index, typename... ExtraArgs>
+template<typename T, typename F, int index, typename... ExtraArgs>
 struct FunctionForwarder;
 
-template<typename T, typename Ret, typename... Args, typename CRet, typename... CArgs, int index, typename... ExtraArgs>
-class FunctionForwarder<Ret (T::*) (Args...), CRet (*) (CArgs...), index, ExtraArgs...>
+template<typename T, typename CRet, typename... CArgs, int index, typename... ExtraArgs>
+class FunctionForwarder<T, CRet (*) (CArgs...), index, ExtraArgs...>
 {
 public:
-  typedef Ret (T::*FuncType)(Args...);
+  typedef typename TypeGenerator<index, T, CRet (*) (CArgs...), ExtraArgs...>::Type FuncType;
   
   FunctionForwarder(T *object, FuncType func, ExtraArgs... extra_args) : object(object), func(func), once(false)
   {
