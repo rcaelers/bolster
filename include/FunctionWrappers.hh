@@ -1,5 +1,66 @@
 #include <tuple>
 
+template <int Index, int SkipIndex, class T, class F1, class F2, class... ExtraArgs>
+struct TypeGeneratorSkipArgument;
+
+template <class T, class F1, class... ExtraArgs>
+struct TypeGeneratorAddExtraArgs;
+
+template <class T, class F1, class F2>
+struct TypeGeneratorReverseArguments;
+
+template <int SkipIndex, class T,  class F, class... ExtraArgs>
+struct TypeGenerator;
+
+template <int SkipIndex, class T, class Ret, class... Args, class... ExtraArgs>
+struct TypeGenerator<SkipIndex, T, Ret (*) (Args...), ExtraArgs...>
+  : public TypeGeneratorSkipArgument<sizeof...(Args), sizeof...(Args) - SkipIndex + 1, T, Ret (*) (), Ret (*) (Args...), ExtraArgs...>
+{
+};
+
+template <int Index, int SkipIndex, class T, class Ret, class... Args1, class Args2Head, class... Args2Tail, class... ExtraArgs>
+struct TypeGeneratorSkipArgument<Index, SkipIndex, T, Ret (*) (Args1...), Ret (*) (Args2Head, Args2Tail...), ExtraArgs...>
+  : public TypeGeneratorSkipArgument<Index - 1, SkipIndex, T, Ret (*) (Args2Head, Args1...), Ret (*) (Args2Tail...), ExtraArgs...>
+{
+};
+
+template <int SkipIndex, class T, class Ret, class... Args1, class Arg2Head, class... Args2Tail, class... ExtraArgs>
+struct TypeGeneratorSkipArgument<SkipIndex, SkipIndex, T, Ret (*) (Args1...), Ret (*) (Arg2Head, Args2Tail...), ExtraArgs...>
+  : public TypeGeneratorSkipArgument<SkipIndex - 1, SkipIndex, T, Ret (*) (Args1...), Ret (*) (Args2Tail...), ExtraArgs...>
+{
+};
+
+template <int SkipIndex, class T, class Ret, class... Args1, class... ExtraArgs>
+struct TypeGeneratorSkipArgument<0, SkipIndex, T, Ret (*) (Args1...), Ret (*) (), ExtraArgs...>
+  : TypeGeneratorAddExtraArgs<T, Ret (*) (Args1...), ExtraArgs...>
+{
+};
+
+template <class T, class Ret, class... Args1, class ExtraArgsHead, class... ExtraArgsTail>
+struct TypeGeneratorAddExtraArgs<T, Ret (*) (Args1...), ExtraArgsHead, ExtraArgsTail...>
+  : TypeGeneratorAddExtraArgs<T, Ret (*) (ExtraArgsHead, Args1...), ExtraArgsTail...>
+{
+};
+
+template <class T, class Ret, class... Args1>
+struct TypeGeneratorAddExtraArgs<T, Ret (*) (Args1...)>
+  : TypeGeneratorReverseArguments<T, Ret (*) (Args1...), Ret (*) ()>
+{
+};
+
+template <class T, class Ret, class Args1Head, class... Args1Tail, class... Args2>
+struct TypeGeneratorReverseArguments<T, Ret (*) (Args1Head, Args1Tail...), Ret (*) (Args2...)>
+  : public TypeGeneratorReverseArguments<T, Ret (*) (Args1Tail...), Ret (*) (Args1Head, Args2...)>
+{
+};
+
+template <class T, class Ret, class... Args2>
+struct TypeGeneratorReverseArguments<T, Ret (*) (), Ret (*) (Args2...)>
+{
+  typedef Ret (T::*Type)(Args2...);
+};
+
+
 template <int Index, int SkipIndex>
 struct TupleDispatcher
 {

@@ -35,6 +35,9 @@ int main(int argc, char **argv)
   BarfooWrapper w(&bar, &Bar::foo, string("hello"), string("world"));
   
   perform_c_callback(BarfooWrapper::dispatch, (void *)&w);
-  
+
+  TypeGenerator<4, Bar, callback_t, std::string, std::string>::Type t;
+
+  t = &Bar::foo;
   return 0;
 }
