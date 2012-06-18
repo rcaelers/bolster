@@ -1,4 +1,4 @@
-// Copyright (C) 2011 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2010, 2011, 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,23 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef SETTINGS_HH
-#define SETTINGS_HH
-
-#include <string>
-
-#include "Document.hh"
-
-class Settings : public Document
-{
-public:
-  Settings();
-  virtual ~Settings();
-
-  void get_value(const std::string &key, std::string &value) const;
-  void set_value(const std::string &key, const std::string &value);
-};
-
-
-  
+#ifdef HAVE_CONFIG_H
+#include "config.h"
 #endif
+
+#include "HttpRequest.hh"
+
+#include <boost/bind.hpp>
+#include <boost/format.hpp>
+#include <boost/algorithm/string.hpp>
+
+using namespace std;
+
+HttpRequest::Ptr
+HttpRequest::create()
+{
+  return Ptr(new HttpRequest());
+}

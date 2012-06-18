@@ -1,4 +1,4 @@
-// Copyright (C) 2010, 2011 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2010, 2011, 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,32 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
+#ifndef IHTTPFILTER_HH
+#define IHTTPFILTER_HH
+
+#include <string>
+#include <map>
+#include <boost/shared_ptr.hpp>
+
+#include "HttpRequest.hh"
+
+class IHttpFilter
+{
+public:
+  virtual ~IHttpFilter() {};
+  
+  typedef boost::shared_ptr<IHttpFilter> Ptr;
+};
+
+class IHttpRequestFilter : public IHttpFilter
+{
+public:
+  typedef boost::shared_ptr<IHttpRequestFilter> Ptr;
+
+public:
+  virtual bool filter_http_request(HttpRequest::Ptr request) = 0;
+};
+
+
+class IHttpErrorFilter : public IHttpFilter
+{
+public:
+  typedef boost::shared_ptr<IHttpErrorFilter> Ptr;
+
+public:
+  virtual bool filter_http_request(int error, const std::string &http_method, std::string &uri, std::string &body,
+                                   std::map<std::string, std::string> &headers) = 0;
+};
+
+
 #endif
-
-#include "PlainCouch.hh"
-
-using namespace std;
-
-PlainCouch::PlainCouch(ICouchDB::Params &params)
-  : CouchDB(),
-    couch_port(0)
-{
-  if (params.count("uri") > 0)
-    {
-      couch_uri = params["uri"];
-    }
-  else
-    {
-      couch_uri = "http://127.0.0.1:5984/";
-    }
-}
-
-
-void
-PlainCouch::init()
-{
-  CouchDB::init();
-  complete();
-}

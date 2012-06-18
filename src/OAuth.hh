@@ -1,4 +1,4 @@
-// Copyright (C) 2010, 2011 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2010, 2011, 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,49 +24,85 @@
 #include <string>
 #include <map>
 #include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
 
-#include "IHttpRequestFilter.hh"
+#include "IHttpBackend.hh"
+#include "OAuthFilter.hh"
 
-class OAuth : public IHttpRequestFilter
+class OAuth
 {
 public:
-  typedef std::map<std::string, std::string> RequestParams;
+  typedef boost::shared_ptr<OAuth> Ptr;
 
+  typedef boost::function<void () > SuccessCallback;
+  typedef boost::function<void () > FailedCallback;
+
+  typedef IHttpBackend::HttpReplyCallback HttpReplyCallback;
+
+  struct Settings
+  {
+    Settings()
+    {
+    }
+    
+    Settings(const std::string &temporary_request_uri,
+             const std::string &authorize_uri,
+             const std::string &token_request_uri,
+             const std::string &success_html,
+             const std::string &failure_html)
+      : temporary_request_uri(temporary_request_uri),
+        authorize_uri(authorize_uri),
+        token_request_uri(token_request_uri),
+        success_html(success_html),
+        failure_html(failure_html)
+    {
+    }
+    
+    std::string temporary_request_uri;
+    std::string authorize_uri;
+    std::string token_request_uri;
+    std::string success_html;
+    std::string failure_html;
+  };
+   
 public:
- 	OAuth();
+  static Ptr create(IHttpBackend::Ptr backend, const Settings &settings);
 
-  void set_consumer(const std::string &consumer_key, const std::string &consumer_secret);
-  void set_token(const std::string &token_key, const std::string &token_secret);
-  void set_custom_headers(const RequestParams &custom_headers = RequestParams());
-
-  bool has_credentials() const;
-  void get_credentials(std::string &consumer_key,
-                       std::string &consumer_secret,
-                       std::string &token_key,
-                       std::string &token_secret);
-
-  virtual bool filter_http_request(const std::string &http_method, std::string &uri, std::string &body,
-                                   std::map<std::string, std::string> &headers);
+ 	OAuth(IHttpBackend::Ptr backend, const Settings &settings);
+  ~OAuth();
+  
+  void init(const std::string &consumer_key,
+            const std::string &consumer_secret,
+            SuccessCallback success_cb,
+            FailedCallback failure_cb);
   
 private:
-  enum ParameterMode { ParameterModeHeader, ParameterModeRequest, ParameterModeSignatureBase };
+  void request_temporary_credentials();
+  void request_resource_owner_authorization();
+  void request_token(const std::string &verifier);
 
-private:
-  const std::string get_timestamp() const;
-  const std::string get_nonce() const;
-  const std::string normalize_uri(const std::string &uri, RequestParams &parameters) const;
-  const std::string parameters_to_string(const RequestParams &parameters, ParameterMode mode) const;
-  const std::string encrypt(const std::string &input, const std::string &key) const;
-  const std::string create_oauth_header(const std::string &http_method, const std::string &uri, RequestParams &parameters) const;
+  void on_temporary_credentials_ready(HttpReply::Ptr reply);
+  void on_resource_owner_authorization_ready(const std::string &method, const std::string &query, const std::string &body,
+                                             std::string &response_content_type, std::string &response_body);
+  void on_token_ready(HttpReply::Ptr reply);
 
+  void parse_query(const std::string &query, OAuthFilter::RequestParams &params) const;
+
+  void failure();
+  void success();
+  
 private:  
-  RequestParams custom_headers;
- 	std::string consumer_key;
- 	std::string consumer_secret;
- 	std::string token_key;
- 	std::string token_secret;
- 	std::string signature_method;
-  std::string oauth_version;
+  IHttpBackend::Ptr backend;
+  OAuthFilter::Ptr oauth;
+  Settings settings;
+
+  std::string token;
+  std::string oauth_callback;
+  
+  SuccessCallback success_cb;
+  FailedCallback failure_cb;
+  
+  std::string verified_path;
 };
 
 #endif

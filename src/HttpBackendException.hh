@@ -18,39 +18,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef HTTPBACKENDEXCEPTION_HH
+#define HTTPBACKENDEXCEPTION_HH
 
-#include <sstream>
-#include "json/json.h"
+#include <string>
+#include "Exception.hh"
 
-#include "Settings.hh"
+class HttpBackendException : public Exception
 
-#include "ICouchDB.hh"
-
-using namespace std;
-
-REGISTER_DOCUMENT_TYPE(Settings, "http://workrave.org/settings")
-
-Settings::Settings()
 {
-  // FIXME: duplication
-  set_type("http://workrave.org/settings"); 
-}
+public:
+  explicit HttpBackendException(const std::string &detail)
+    : Exception(detail)
+  {
+  }
 
-Settings::~Settings()
-{
-}
+  virtual ~HttpBackendException() throw()
+  {
+  }
+};
 
-void
-Settings::get_value(const std::string &key, std::string &value) const
-{
-  value = root[key].asString();
-}
-
-void
-Settings::set_value(const std::string &key, const std::string &value)
-{
-  root[key] = value;
-}
+#endif // HTTPBACKENDEXCEPTION_HH

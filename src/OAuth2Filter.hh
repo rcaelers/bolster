@@ -1,4 +1,4 @@
-// Copyright (C) 2010, 2011 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2010, 2011, 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,24 +18,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef WEBBACKENDEXCEPTION_HH
-#define WEBBACKENDEXCEPTION_HH
+#ifndef OAUTH2FILTER_HH
+#define OAUTH2FILTER_HH
 
 #include <string>
-#include "Exception.hh"
+#include <boost/shared_ptr.hpp>
 
-class WebBackendException : public Exception
+#include "IHttpFilter.hh"
 
+class OAuth2Filter : public IHttpRequestFilter
 {
 public:
-  explicit WebBackendException(const std::string &detail)
-    : Exception(detail)
-  {
-  }
+  typedef boost::shared_ptr<OAuth2Filter> Ptr;
 
-  virtual ~WebBackendException() throw()
-  {
-  }
+public:
+  static Ptr create();
+
+  void set_access_token(const std::string &acces_token);
+
+  virtual bool filter_http_request(HttpRequest::Ptr request);
+
+private:  
+  std::string access_token;
 };
 
-#endif // WEBBACKENDEXCEPTION_HH
+#endif // OAUTH2FILTER_HH

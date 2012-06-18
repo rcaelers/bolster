@@ -1,4 +1,4 @@
-// Copyright (C) 2010, 2011 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2010, 2011, 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,27 +18,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef DESKTOPCOUCHDBUS_HH
-#define DESKTOPCOUCHDBUS_HH
+#ifndef HTTPREQUEST_HH
+#define HTTPREQUEST_HH
 
-#include <gio/gio.h>
-#include <boost/function.hpp>
+#include <string>
+#include <map>
 #include <boost/shared_ptr.hpp>
 
-#include "GDBusWrapper.hh"
-
-class DesktopCouchDBus : public DBusObject
+class HttpRequest
 {
 public:
-  typedef boost::shared_ptr<DesktopCouchDBus> Ptr;
-  typedef boost::function<void (int) > GetPortCallback;
+  typedef boost::shared_ptr<HttpRequest> Ptr;
 
+  typedef std::map<std::string, std::string> Headers;
+
+  static Ptr create();
+
+  virtual ~HttpRequest() {}
+  
 public:
-  DesktopCouchDBus();
-  void get_port(GetPortCallback callback);
-
-private:
-  void on_get_port_reply(GVariant *var, GError *error, GetPortCallback callback); 
+  std::string method;
+  std::string uri;
+  Headers headers;
+  std::string body;
+  std::string content_type;
 };
+
 
 #endif

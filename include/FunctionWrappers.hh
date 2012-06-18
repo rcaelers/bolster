@@ -66,9 +66,9 @@ struct TupleDispatcher
 {
   template <typename T, typename Ret, typename... FuncArgs, typename... TupleArgs, typename... Args>
   static Ret dispatch(T *object,
-                       Ret (T::*func)(FuncArgs...),
-                       const std::tuple<TupleArgs...> &tuple,
-                       Args... args)
+                      Ret (T::*func)(FuncArgs...),
+                      const std::tuple<TupleArgs...> &tuple,
+                      Args... args)
   {
     return TupleDispatcher<Index-1, SkipIndex>::dispatch(object, func, tuple, std::get<Index-1>(tuple), args...);
   }

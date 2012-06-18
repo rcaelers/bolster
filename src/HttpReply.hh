@@ -1,4 +1,4 @@
-// Copyright (C) 2011 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2010, 2011, 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,32 +18,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef DATABASE_HH
-#define DATABASE_HH
+#ifndef HTTPREPLY_HH
+#define HTTPREPLY_HH
 
 #include <string>
+#include <map>
+#include <boost/shared_ptr.hpp>
 
-class ICouchDB;
-class Document;
+#include "HttpRequest.hh"
 
-class Database
+class HttpReply
 {
 public:
-  Database(ICouchDB *couch, const std::string &database_name);
-  virtual ~Database();
+  typedef boost::shared_ptr<HttpReply> Ptr;
 
-  void create();
-  void destroy();
-  
-  void put(Document *doc);
-  void remove(Document *doc);
-  Document *get(const std::string &id);
+  typedef std::map<std::string, std::string> Headers;
 
-  std::string get_database_name() const;
+  static Ptr create(HttpRequest::Ptr request);
+
+  HttpReply(HttpRequest::Ptr request);
   
-private:
-  std::string database_name;
-  ICouchDB *couch;
+public:
+  HttpRequest::Ptr request;
+
+  int status;
+  Headers headers;
+  std::string body;
+  std::string content_type;
 };
-  
+
+
 #endif

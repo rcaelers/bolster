@@ -1,4 +1,4 @@
-// Copyright (C) 2010, 2011 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2010, 2011, 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,73 +22,33 @@
 #include "config.h"
 #endif
 
-#include "Document.hh"
+#include "OAuth2Filter.hh"
 
 using namespace std;
 
-Document::Document()
+OAuth2Filter::Ptr
+OAuth2Filter::create()
 {
+  return Ptr(new OAuth2Filter());
 }
 
 
 void
-Document::init(const std::string &database, Json::Value &root)
+OAuth2Filter::set_access_token(const std::string &access_token)
 {
-  this->database = database;
-  this->root = root;
+  this->access_token = access_token;
 }
 
 
-Document::~Document()
+bool
+OAuth2Filter::filter_http_request(HttpRequest::Ptr request)
 {
+  if (access_token != "")
+    {
+      request->headers["Authorization"] = string("Bearer ") + access_token;
+      return true;
+    }
+  
+  return true;
 }
 
-
-std::string
-Document::str() const
-{
-  Json::StyledWriter writer;
-  return writer.write(root);
-}
-
-
-std::string
-Document::get_id() const
-{
-    return root["_id"].asString();
-} 
-
-
-std::string
-Document::get_revision() const
-{
-  return root["_rev"].asString();
-}
-
-
-std::string
-Document::get_type() const
-{
-  return root["record_type"].asString();
-} 
-
-
-void
-Document::set_id(const std::string &id)
-{
-  root["_id"] = id;
-} 
-
-
-void
-Document::set_revision(const std::string &rev)
-{
-  root["_rev"] = rev;
-}
-
-
-void
-Document::set_type(const std::string &type)
-{
-  root["record_type"] = type;
-} 

@@ -23,6 +23,9 @@ set(ALLLIBS ${GLIB_LIBRARIES} ${LIBGCRYPT_LIBS} ${SOUP_LIBRARIES} ${KEYRING_LIBR
 add_definitions(-W -Wall -g -O0)
 add_definitions(-DHAVE_CONFIG_H=1)
 
-add_library(couch CouchDBFactory.cc WebBackendSoup.cc OAuth.cc OAuthWorkflow.cc UbuntuOneSSO.cc Secrets.cc CouchDB.cc DesktopCouch.cc DesktopCouchDBus.cc UbuntuOneCouch.cc PlainCouch.cc Uri.cc GDBusWrapper.cc jsoncpp.cpp Document.cc Database.cc)
+#add_library(couch CouchDBFactory.cc HttpBackendSoup.cc OAuth.cc OAuthWorkflow.cc OAuth2.cc OAuth2Workflow.cc UbuntuOneSSO.cc Secrets.cc CouchDB.cc DesktopCouch.cc DesktopCouchDBus.cc UbuntuOneCouch.cc PlainCouch.cc Uri.cc GDBusWrapper.cc jsoncpp.cpp Document.cc Database.cc DropboxAuth.cc GoogleAuth.cc)
+
+add_library(couch HttpRequest.cc HttpReply.cc HttpReplySoup.cc HttpBackendSoup.cc OAuth.cc OAuthFilter.cc OAuth2.cc OAuth2Filter.cc Uri.cc jsoncpp.cpp DropboxAuth.cc GoogleAuth.cc)
+
 target_link_libraries(couch ${ALLLIBS})
 

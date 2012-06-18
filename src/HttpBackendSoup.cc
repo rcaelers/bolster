@@ -1,4 +1,4 @@
-// Copyright (C) 2010, 2011 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2010, 2011, 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,17 +22,26 @@
 #include "config.h"
 #endif
 
-#include "WebBackendSoup.hh"
+#include "HttpBackendSoup.hh"
 
 #include <glib.h>
 
-#include "WebBackendException.hh"
-#include "OAuth.hh"
+#include "HttpBackendException.hh"
 #include "Uri.hh"
+
+#include "HttpRequest.hh"
+#include "HttpReplySoup.hh"
 
 using namespace std;
 
-WebBackendSoup::WebBackendSoup()
+HttpBackendSoup::Ptr
+HttpBackendSoup::create()
+{
+  return Ptr(new HttpBackendSoup());
+}
+
+
+HttpBackendSoup::HttpBackendSoup()
   : sync_session(NULL),
     async_session(NULL),
     proxy(NULL)
@@ -40,7 +49,7 @@ WebBackendSoup::WebBackendSoup()
 }
 
 
-WebBackendSoup::~WebBackendSoup()
+HttpBackendSoup::~HttpBackendSoup()
 {
   if (sync_session != NULL)
     {
@@ -58,61 +67,60 @@ WebBackendSoup::~WebBackendSoup()
     }
 }
 
+
 void
-WebBackendSoup::add_filter(IHttpRequestFilter *filter)
+HttpBackendSoup::add_filter(IHttpFilter::Ptr filter)
 {
   filters.push_back(filter);
 }
 
 
 void
-WebBackendSoup::remove_filter(IHttpRequestFilter *filter)
+HttpBackendSoup::remove_filter(IHttpFilter::Ptr filter)
 {
   filters.remove(filter);
 }
 
 
-int
-WebBackendSoup::request(const string &http_method,
-                        const string &uri,
-                        const string &body,
-                        string &response_body)
+HttpReply::Ptr
+HttpBackendSoup::request(HttpRequest::Ptr request)
 {
   if (sync_session == NULL)
     {
       init_sync();
     }
 
-  SoupMessage *message = create_soup_message(http_method, uri, body);
-  soup_session_send_message(sync_session, message);
+  apply_request_filters(request);
 
-  response_body = (message->response_body->length > 0) ? message->response_body->data : "";
-  int ret = message->status_code;
-  
-	g_object_unref(message);
-  
-  return ret;
+  HttpReplySoup::Ptr reply = HttpReplySoup::create(request);
+  reply->init(sync_session);
+
+  return reply;
 }
 
 
-void
-WebBackendSoup::request(const string &http_method, const string &uri, const string &body, WebReplyCallback callback)
+HttpReply::Ptr
+HttpBackendSoup::request(HttpRequest::Ptr request, HttpReplyCallback callback)
 {
   if (async_session == NULL)
     {
       init_async();
     }
 
-  SoupMessage *message = create_soup_message(http_method, uri, body);
-  AsyncReplyForwarder *forwarder = new AsyncReplyForwarder(this, &WebBackendSoup::client_callback, callback);
-  forwarder->set_once();
-  soup_session_queue_message(async_session, message, AsyncReplyForwarder::dispatch, forwarder);
+  apply_request_filters(request);
+ 
+  HttpReplySoup::Ptr reply = HttpReplySoup::create(request);
+  reply->init(async_session, callback);
+
+  return reply;
 }
 
 
 void
-WebBackendSoup::listen(WebRequestCallback callback, const string &path, int &port)
+HttpBackendSoup::listen(HttpRequestCallback callback, const string &path, int &port)
 {
+  AsyncServerData *data = new AsyncServerData(this, callback);
+
   SoupAddress *addr = soup_address_new("127.0.0.1", SOUP_ADDRESS_ANY_PORT);
   soup_address_resolve_sync(addr, NULL);
 
@@ -123,36 +131,33 @@ WebBackendSoup::listen(WebRequestCallback callback, const string &path, int &por
 
 	if (server == NULL)
     {
-      throw WebBackendException("Cannot receive incoming connections.");
+      throw HttpBackendException("Cannot receive incoming connections.");
     }
   
   port = soup_server_get_port(server);
   g_debug("Listening on %d", port);
 
-  AsyncRequestForwarder *forwarder = new AsyncRequestForwarder(this, &WebBackendSoup::server_callback, callback);
-
-  ServerData *data = new ServerData(server, forwarder);
-  servers[path] = data;
+  servers[path] = server;
   
-  soup_server_add_handler(server, path.c_str(), AsyncRequestForwarder::dispatch, forwarder, NULL);
+  soup_server_add_handler(server, path.c_str(), AsyncServerData::cb, data, NULL);
 	soup_server_run_async(server);
 }
 
 
 void
-WebBackendSoup::stop_listen(const std::string &path)
+HttpBackendSoup::stop_listen(const std::string &path)
 {
   if (servers.find(path) != servers.end())
     {
-      ServerData *data = servers[path];
-      delete data;
+      SoupServer *server = servers[path];
+      g_object_unref(server);
       servers.erase(path);
     }
 }
 
 
 void
-WebBackendSoup::init_async()
+HttpBackendSoup::init_async()
 {
   async_session = soup_session_async_new_with_options(
 #ifdef HAVE_GNOME
@@ -166,7 +171,7 @@ WebBackendSoup::init_async()
   
   if (async_session == NULL)
     {
-      throw WebBackendException("Cannot create session.");
+      throw HttpBackendException("Cannot create session.");
     }
   
   if (proxy)
@@ -177,7 +182,7 @@ WebBackendSoup::init_async()
 
 
 void
-WebBackendSoup::init_sync()
+HttpBackendSoup::init_sync()
 {
   sync_session = soup_session_sync_new_with_options (
 #ifdef HAVE_GNOME
@@ -191,7 +196,7 @@ WebBackendSoup::init_sync()
 
   if (sync_session == NULL)
     {
-      throw WebBackendException("Cannot create session.");
+      throw HttpBackendException("Cannot create session.");
     }
   
   if (proxy)
@@ -201,47 +206,33 @@ WebBackendSoup::init_sync()
 }
 
 
-SoupMessage *
-WebBackendSoup::create_soup_message(const string &http_method,
-                                    const string &uri,
-                                    const string &body)
+void
+HttpBackendSoup::apply_request_filters(HttpRequest::Ptr request)
 {
-  SoupMessage *message = soup_message_new(http_method.c_str(), uri.c_str());
-  if (message == NULL)
-    {
-      throw WebBackendException("Cannot create HTTP request: " + http_method + " " + uri);
-    }
-
-  if (body != "")
-    {
-      soup_message_set_request(message, "application/json", SOUP_MEMORY_COPY,
-                               body.c_str(), body.size());
-    }
-
-  map<string, string> headers;
-
   for (FilterList::iterator i = filters.begin(); i != filters.end(); i++)
     {
-      string u = uri;
-      string b = body;
-      (*i)->filter_http_request(http_method, u, b, headers);
+      IHttpRequestFilter::Ptr f = boost::dynamic_pointer_cast<IHttpRequestFilter>(*i);
+      if (f)
+        {
+          f->filter_http_request(request);
+        }
     }
-  
-  for (map<string, string>::const_iterator i = headers.begin(); i != headers.end(); i++)
-    {
-      soup_message_headers_append(message->request_headers, i->first.c_str(), i->second.c_str());
-    }
-  
-	soup_message_set_flags(message, SOUP_MESSAGE_NO_REDIRECT);
-
-  return message;
 }
 
 
 void
-WebBackendSoup::server_callback(SoupServer *, SoupMessage *message, const char *path,
+HttpBackendSoup::AsyncServerData::cb(SoupServer *server, SoupMessage *message, const char *path,
+                                    GHashTable *query, SoupClientContext *context, gpointer data)
+{
+  AsyncServerData *d = (AsyncServerData *)data;
+  d->backend->server_callback(server, message, path, query, context, d);
+  delete d;
+}
+
+void
+HttpBackendSoup::server_callback(SoupServer *, SoupMessage *message, const char *path,
                                 GHashTable *query, SoupClientContext *context,
-                                WebRequestCallback callback)
+                                AsyncServerData *data)
 {
   (void) path;
   (void) context;
@@ -253,19 +244,8 @@ WebBackendSoup::server_callback(SoupServer *, SoupMessage *message, const char *
   string content_type;
   string reply;
 
-  callback(message->method, response_query, response_body, content_type, reply);
+  data->callback(message->method, response_query, response_body, content_type, reply);
 
   soup_message_set_status(message, SOUP_STATUS_OK);
   soup_message_set_response(message, content_type.c_str(), SOUP_MEMORY_COPY, reply.c_str(), reply.length());
-}
-
-
-void
-WebBackendSoup::client_callback(SoupSession *session, SoupMessage *message, WebReplyCallback callback)
-{
-  (void)session;
-
-  string response_body = (message->response_body->length > 0) ? message->response_body->data : "";
-  callback(message->status_code, response_body);
-	g_object_unref(message);
 }

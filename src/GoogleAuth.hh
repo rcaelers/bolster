@@ -1,4 +1,4 @@
-// Copyright (C) 2010, 2011 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2010, 2011, 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,48 +18,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
+#ifndef UBUNTUONESSO_HH
+#define UBUNTUONESSO_HH
+
+#include <string>
+#include <map>
+#include <gio/gio.h>
+#include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
+
+#include "OAuth2Filter.hh"
+#include "OAuth2.hh"
+#include "Exception.hh"
+
+class GoogleAuth
+{
+public:
+  typedef boost::shared_ptr<GoogleAuth> Ptr;
+  typedef boost::function<void (bool) > AsyncAuthResult;
+
+  static Ptr create();
+  
+ 	GoogleAuth();
+  virtual ~GoogleAuth();
+  
+  void init(std::string access_token, std::string refresh_token);
+  void init(AsyncAuthResult callback);
+
+  IHttpBackend::Ptr get_backend() const
+  {
+    return backend;
+  }
+  
+private:
+  void on_auth_result(bool success);
+
+private:  
+  OAuth2::Ptr workflow;
+  IHttpBackend::Ptr backend;
+  AsyncAuthResult callback;
+  OAuth2::Settings oauth_settings;
+};
+
+  
 #endif
-
-#include "DesktopCouchDBus.hh"
-
-#include <glib.h>
-#include <boost/bind.hpp>
-
-using namespace std;
-
-DesktopCouchDBus::DesktopCouchDBus()
-  : DBusObject("org.desktopcouch.CouchDB", "/", "org.desktopcouch.CouchDB")
-{
-}
-    
-
-void
-DesktopCouchDBus::get_port(GetPortCallback callback)
-{
-  GDBusMethodReply *w = new GDBusMethodReply(boost::bind(&DesktopCouchDBus::on_get_port_reply, this, _1, _2, callback));
-  
-  g_dbus_proxy_call(proxy,
-                    "getPort",
-                    NULL,
-                    G_DBUS_CALL_FLAGS_NONE,
-                    -1,
-                    NULL,
-                    GDBusMethodReply::cb,
-                    w);
-}
-
-
-void
-DesktopCouchDBus::on_get_port_reply(GVariant *var, GError *error, GetPortCallback callback)
-{
-  int port = 0;
-  
-  if (error == NULL && var != NULL)
-    {
-      g_variant_get(var, "(i)", &port);
-    }
-
-  callback(port);
-}

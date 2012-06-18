@@ -1,4 +1,4 @@
-// Copyright (C) 2010, 2011 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2010, 2011, 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,39 +18,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef IWEBBACKEND_HH
-#define IWEBBACKEND_HH
+#ifndef IHTTPBACKEND_HH
+#define IHTTPBACKEND_HH
 
 #include <string>
 #include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
 
-class OAuth;
-class IHttpRequestFilter;
+#include "IHttpFilter.hh"
+#include "HttpRequest.hh"
+#include "HttpReply.hh"
 
-class IWebBackend
+class IHttpBackend
 {
 public:
-  typedef boost::function<void (int status, const std::string &response) > WebReplyCallback;
+  typedef boost::shared_ptr<IHttpBackend> Ptr;
+
+  typedef boost::function<void (HttpReply::Ptr reply) > HttpReplyCallback;
   typedef boost::function<void (const std::string &method, const std::string &query, const std::string &body,
-                                std::string &response_content_type, std::string &response_body) > WebRequestCallback;
+                                std::string &response_content_type, std::string &response_body) > HttpRequestCallback;
 
 public:
-  virtual ~IWebBackend() {}
+  virtual ~IHttpBackend() {}
 
-  virtual void add_filter(IHttpRequestFilter *filter) = 0;
-  virtual void remove_filter(IHttpRequestFilter *filter) = 0;
+  virtual void add_filter(IHttpFilter::Ptr filter) = 0;
+  virtual void remove_filter(IHttpFilter::Ptr filter) = 0;
+
+  virtual HttpReply::Ptr request(HttpRequest::Ptr request) = 0;
+  virtual HttpReply::Ptr request(HttpRequest::Ptr request, const HttpReplyCallback callback) = 0;
   
-  virtual int request(const std::string &http_method,
-                      const std::string &uri,
-                      const std::string &body,
-                      std::string &response_body) = 0;
-  
-  virtual void request(const std::string &http_method,
-                       const std::string &uri,
-                       const std::string &body,
-                       const WebReplyCallback callback) = 0;
-  
-  virtual void listen(const WebRequestCallback callback,
+  virtual void listen(const HttpRequestCallback callback,
                       const std::string &path,
                       int &port) = 0;
 

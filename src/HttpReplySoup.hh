@@ -1,4 +1,4 @@
-// Copyright (C) 2010, 2011 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2010, 2011, 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,29 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef UBUNTUONECOUCH_HH
-#define UBUNTUONECOUCH_HH
+#ifndef HTTPREPLYSOUP_HH
+#define HTTPREPLYSOUP_HH
 
 #include <string>
+#include <map>
+#include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
 
-#include "CouchDB.hh"
+#ifdef HAVE_GNOME
+#include <libsoup/soup-gnome.h>
+#else
+#include <libsoup/soup.h>
+#endif
 
-class UbuntuOneSSO;
+#include "HttpReply.hh"
+#include "IHttpBackend.hh"
 
-class UbuntuOneCouch : public CouchDB
+class HttpReplySoup : public HttpReply, public boost::enable_shared_from_this<HttpReplySoup>
 {
 public:
- 	UbuntuOneCouch();
-  virtual ~UbuntuOneCouch();
-  
-  void init();
+  typedef boost::shared_ptr<HttpReplySoup> Ptr;
+
+  static Ptr create(HttpRequest::Ptr request);
+
+  HttpReplySoup(HttpRequest::Ptr request);
+
+  void init(SoupSession *session, IHttpBackend::HttpReplyCallback callback = 0);
   
 private:
-  void on_pairing_success(const std::string &, const std::string &, const std::string &, const std::string &);
-  void on_pairing_failed();
-  void cleanup();
+  IHttpBackend::HttpReplyCallback callback;
+
+  SoupMessage *create_request_message() const;
   
-  UbuntuOneSSO *sso;
+  static void reply_ready_static(SoupSession *session, SoupMessage *message, gpointer user_data);
+  void reply_ready(SoupSession *session, SoupMessage *message);
 };
-  
+
+
 #endif
