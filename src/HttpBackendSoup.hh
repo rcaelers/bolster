@@ -45,15 +45,12 @@ public:
  	HttpBackendSoup();
   virtual ~HttpBackendSoup();
 
-  virtual void add_filter(IHttpFilter::Ptr filter);
-  virtual void remove_filter(IHttpFilter::Ptr filter);
+  virtual void set_decorator_factory(IHttpDecoratorFactory::Ptr factory);
 
   virtual HttpReply::Ptr request(HttpRequest::Ptr request);
-  virtual HttpReply::Ptr request(HttpRequest::Ptr request, const HttpReplyCallback callback);
+  virtual HttpReply::Ptr request(HttpRequest::Ptr request, const IHttpExecute::HttpExecuteReady callback);
   
-  virtual void listen(const HttpRequestCallback callback,
-                      const std::string &path,
-                      int &port);
+  virtual void listen(const HttpRequestCallback callback, const std::string &path, int &port);
 
   virtual void stop_listen(const std::string &path);
   
@@ -89,10 +86,9 @@ private:
   SoupURI *proxy;
 
   typedef std::map<std::string, SoupServer*> ServerList;
-  typedef std::list<IHttpFilter::Ptr> FilterList;
+  IHttpDecoratorFactory::Ptr decorator_factory;
   
   ServerList servers;
-  FilterList filters;
 };
 
 #endif

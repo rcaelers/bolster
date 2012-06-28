@@ -23,32 +23,83 @@
 #endif
 
 #include "OAuth2Filter.hh"
+#include <glib.h>
 
 using namespace std;
 
 OAuth2Filter::Ptr
-OAuth2Filter::create()
+OAuth2Filter::create(IHttpExecute::Ptr executor)
 {
-  return Ptr(new OAuth2Filter());
+  return Ptr(new OAuth2Filter(executor));
+}
+
+
+OAuth2Filter::OAuth2Filter(IHttpExecute::Ptr executor) : HttpDecorator(executor)
+{
+  this->waiting = false;
 }
 
 
 void
 OAuth2Filter::set_access_token(const std::string &access_token)
 {
+  g_debug("OAuth2Filter::set_access_token %s", access_token.c_str());
   this->access_token = access_token;
+  if (waiting)
+    {
+      execute(callback);
+    }
 }
 
 
-bool
-OAuth2Filter::filter_http_request(HttpRequest::Ptr request)
+void
+OAuth2Filter::filter()
 {
   if (access_token != "")
     {
-      request->headers["Authorization"] = string("Bearer ") + access_token;
-      return true;
+      get_request()->headers["Authorization"] = string("Bearer ") + access_token;
     }
-  
-  return true;
 }
 
+
+HttpReply::Ptr
+OAuth2Filter::execute(IHttpExecute::HttpExecuteReady callback)
+{
+  g_debug("OAuth2Filter:execute");
+  HttpReply::Ptr reply;
+
+  this->callback = callback;
+  this->waiting = false;
+  
+  filter();
+
+  if (is_sync())
+    {
+      g_debug("OAuth2Filter:execute sync");
+      reply = executor->execute();
+      on_reply(reply);
+    }
+  else if (!callback.empty())
+    {
+      g_debug("OAuth2Filter:execute async");
+      reply = executor->execute(boost::bind(&OAuth2Filter::on_reply, this, _1));
+    }
+  g_debug("OAuth2Filter:execute ok");
+  return reply;
+}
+
+void
+OAuth2Filter::on_reply(HttpReply::Ptr reply)
+{
+  g_debug("oauth2filter reply async : %d %s", reply->status, reply->body.c_str());
+  if (reply->status == 401)
+    {
+      waiting = true;
+      refresh_request_signal();
+    }
+  else
+    {
+      callback(reply);
+    }
+    
+}

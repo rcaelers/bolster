@@ -30,7 +30,7 @@
 #include "Uri.hh"
 
 #include "HttpRequest.hh"
-#include "HttpReplySoup.hh"
+#include "HttpExecuteSoup.hh"
 
 using namespace std;
 
@@ -69,16 +69,9 @@ HttpBackendSoup::~HttpBackendSoup()
 
 
 void
-HttpBackendSoup::add_filter(IHttpFilter::Ptr filter)
+HttpBackendSoup::set_decorator_factory(IHttpDecoratorFactory::Ptr factory)
 {
-  filters.push_back(filter);
-}
-
-
-void
-HttpBackendSoup::remove_filter(IHttpFilter::Ptr filter)
-{
-  filters.remove(filter);
+  this->decorator_factory = factory;
 }
 
 
@@ -90,29 +83,37 @@ HttpBackendSoup::request(HttpRequest::Ptr request)
       init_sync();
     }
 
-  apply_request_filters(request);
+  HttpExecuteSoup::Ptr exec = HttpExecuteSoup::create(request);
+  exec->init(sync_session, true);
 
-  HttpReplySoup::Ptr reply = HttpReplySoup::create(request);
-  reply->init(sync_session);
-
-  return reply;
+  IHttpExecute::Ptr wrapped_exec = exec;
+  if (decorator_factory)
+    {
+      wrapped_exec = decorator_factory->create_decorator(exec);
+    }
+      
+  return wrapped_exec->execute();
 }
 
 
 HttpReply::Ptr
-HttpBackendSoup::request(HttpRequest::Ptr request, HttpReplyCallback callback)
+HttpBackendSoup::request(HttpRequest::Ptr request, IHttpExecute::HttpExecuteReady callback)
 {
   if (async_session == NULL)
     {
       init_async();
     }
 
-  apply_request_filters(request);
- 
-  HttpReplySoup::Ptr reply = HttpReplySoup::create(request);
-  reply->init(async_session, callback);
+  HttpExecuteSoup::Ptr exec = HttpExecuteSoup::create(request);
+  exec->init(async_session, false);
 
-  return reply;
+  IHttpExecute::Ptr wrapped_exec = exec;
+  if (decorator_factory)
+    {
+      wrapped_exec = decorator_factory->create_decorator(exec);
+    }
+      
+  return wrapped_exec->execute(callback);
 }
 
 
@@ -202,20 +203,6 @@ HttpBackendSoup::init_sync()
   if (proxy)
     {
       g_object_set(G_OBJECT(sync_session), SOUP_SESSION_PROXY_URI, proxy, NULL);
-    }
-}
-
-
-void
-HttpBackendSoup::apply_request_filters(HttpRequest::Ptr request)
-{
-  for (FilterList::iterator i = filters.begin(); i != filters.end(); i++)
-    {
-      IHttpRequestFilter::Ptr f = boost::dynamic_pointer_cast<IHttpRequestFilter>(*i);
-      if (f)
-        {
-          f->filter_http_request(request);
-        }
     }
 }
 

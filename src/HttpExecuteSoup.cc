@@ -22,7 +22,7 @@
 #include "config.h"
 #endif
 
-#include "HttpReplySoup.hh"
+#include "HttpExecuteSoup.hh"
 
 #include <boost/bind.hpp>
 #include <boost/format.hpp>
@@ -32,31 +32,77 @@
 
 using namespace std;
 
-HttpReplySoup::Ptr
-HttpReplySoup::create(HttpRequest::Ptr request)
+HttpExecuteSoup::Ptr
+HttpExecuteSoup::create(HttpRequest::Ptr request)
 {
-  return Ptr(new HttpReplySoup(request));
+  return Ptr(new HttpExecuteSoup(request));
 }
 
 
-HttpReplySoup::HttpReplySoup(HttpRequest::Ptr request) : HttpReply(request)
+HttpExecuteSoup::HttpExecuteSoup(HttpRequest::Ptr request) : session(NULL), request(request)
 {
+  reply = HttpReply::create(request);
 }
 
+
+HttpExecuteSoup::~HttpExecuteSoup()
+{
+}
 
 void
-HttpReplySoup::init(SoupSession *session, IHttpBackend::HttpReplyCallback callback)
+HttpExecuteSoup::init(SoupSession *session, bool sync)
+{
+  this->session = session;
+  this->sync = sync;
+}
+
+
+HttpReply::Ptr
+HttpExecuteSoup::execute(IHttpExecute::HttpExecuteReady callback)
 {
   this->callback = callback;
-  
-  SoupMessage *message = create_request_message();
-  soup_session_queue_message(session, message, reply_ready_static, this);
+
+  if (sync)
+    {
+      g_debug("request");
+
+      SoupMessage *message = create_request_message();
+      soup_session_send_message(session, message);
+      process_reply_message(message); 
+      g_object_unref(message);
+   }
+  else if (!callback.empty())
+    {
+      CallbackData *data = new CallbackData;
+      data->self = boost::dynamic_pointer_cast<HttpExecuteSoup>(shared_from_this());
+
+      SoupMessage *message = create_request_message();
+      soup_session_queue_message(session, message, reply_ready_static, data);
+    }
+
+  return reply;
+}
+
+
+HttpRequest::Ptr
+HttpExecuteSoup::get_request() const
+{
+  return request;
+}
+
+
+bool
+HttpExecuteSoup::is_sync() const
+{
+  return sync;
 }
 
 
 SoupMessage *
-HttpReplySoup::create_request_message() const
+HttpExecuteSoup::create_request_message()
 {
+  //apply_request_filters();
+  
   SoupMessage *message = soup_message_new(request->method.c_str(), request->uri.c_str());
   if (message == NULL)
     {
@@ -80,34 +126,46 @@ HttpReplySoup::create_request_message() const
 }
 
 void
-HttpReplySoup::reply_ready_static(SoupSession *session, SoupMessage *message, gpointer user_data)
+HttpExecuteSoup::reply_ready_static(SoupSession *session, SoupMessage *message, gpointer user_data)
 {
-  HttpReplySoup *self = (HttpReplySoup *)user_data;
+  CallbackData *data = (CallbackData *) user_data;
+  HttpExecuteSoup::Ptr self = data->self;
   self->reply_ready(session, message);
+  delete data;
 }
 
 
 void
-HttpReplySoup::reply_ready(SoupSession *session, SoupMessage *message)
+HttpExecuteSoup::process_reply_message(SoupMessage *message)
 {
-  (void)session;
-
-  status = message->status_code;
-  body = (message->response_body->length > 0) ? message->response_body->data : "";
+  reply->status = message->status_code;
+  reply->body = (message->response_body->length > 0) ? message->response_body->data : "";
 
   SoupMessageHeadersIter iter;
   const char *name, *value;
   soup_message_headers_iter_init(&iter, message->response_headers);
+
   while (soup_message_headers_iter_next(&iter, &name, &value))
     {
-      g_debug("resp header %s : %s", name, value);
-      headers[name] = value;
+      string n = name;
+      string v = value;
+      //g_debug("resp header %s : %s", name, value);
+      reply->headers[n] = v;
     }
+
+}
+
+void
+HttpExecuteSoup::reply_ready(SoupSession *session, SoupMessage *message)
+{
+  (void)session;
+
+  process_reply_message(message);
+
+  g_debug("reply (async) %d", reply->status);
 
   if (!callback.empty())
     {
-      callback(shared_from_this());
+      callback(reply);
     }
-  
-	g_object_unref(message);
 }

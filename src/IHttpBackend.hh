@@ -25,27 +25,28 @@
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "IHttpFilter.hh"
 #include "HttpRequest.hh"
 #include "HttpReply.hh"
+#include "IHttpExecute.hh"
+#include "IHttpDecoratorFactory.hh"
 
 class IHttpBackend
 {
 public:
   typedef boost::shared_ptr<IHttpBackend> Ptr;
 
-  typedef boost::function<void (HttpReply::Ptr reply) > HttpReplyCallback;
+  typedef boost::function<IHttpExecute::Ptr (IHttpExecute::Ptr) > Wrapper;
+  
   typedef boost::function<void (const std::string &method, const std::string &query, const std::string &body,
                                 std::string &response_content_type, std::string &response_body) > HttpRequestCallback;
 
 public:
   virtual ~IHttpBackend() {}
 
-  virtual void add_filter(IHttpFilter::Ptr filter) = 0;
-  virtual void remove_filter(IHttpFilter::Ptr filter) = 0;
+  virtual void set_decorator_factory(IHttpDecoratorFactory::Ptr factory) = 0;
 
   virtual HttpReply::Ptr request(HttpRequest::Ptr request) = 0;
-  virtual HttpReply::Ptr request(HttpRequest::Ptr request, const HttpReplyCallback callback) = 0;
+  virtual HttpReply::Ptr request(HttpRequest::Ptr request, const IHttpExecute::HttpExecuteReady callback) = 0;
   
   virtual void listen(const HttpRequestCallback callback,
                       const std::string &path,

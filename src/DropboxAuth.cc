@@ -112,7 +112,7 @@ DropboxAuth::init(string key, string secret)
       backend = HttpBackendSoup::create();
       oauth = OAuthFilter::create();
 
-      backend->add_filter(oauth);
+      //backend->add_filter(oauth);
       
       oauth->set_consumer("xxx", "xxx");
       oauth->set_token(key, secret);

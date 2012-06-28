@@ -18,44 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef OAUTH2FILTER_HH
-#define OAUTH2FILTER_HH
+#ifndef IHTTPEXECUTE_HH
+#define IHTTPEXECUTE_HH
 
 #include <string>
-#include <boost/signals2.hpp>
+#include <map>
 #include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
+#include <boost/function.hpp>
 
-#include "HttpDecorator.hh"
+#include "HttpRequest.hh"
 #include "HttpReply.hh"
 
-class OAuth2Filter : public HttpDecorator
+class IHttpExecute : public boost::enable_shared_from_this<IHttpExecute>
 {
 public:
-  typedef boost::shared_ptr<OAuth2Filter> Ptr;
+  typedef boost::shared_ptr<IHttpExecute> Ptr;
 
-  typedef boost::signals2::signal<void()> RefreshRequestSignal;
+  typedef boost::function<void (HttpReply::Ptr reply) > HttpExecuteReady;
   
-public:
-  static Ptr create(IHttpExecute::Ptr);
-
-  OAuth2Filter(IHttpExecute::Ptr executor);
-  void set_access_token(const std::string &acces_token);
-
-  RefreshRequestSignal &signal_refresh_request()
-  {
-    return refresh_request_signal;
-  }
-
-  virtual HttpReply::Ptr execute(HttpExecuteReady callback = 0);
+  virtual HttpReply::Ptr execute(HttpExecuteReady callback = 0) = 0;
+  virtual HttpRequest::Ptr get_request() const = 0;
+  virtual bool is_sync() const = 0;
   
-private:
-  void filter();
-  void on_reply(HttpReply::Ptr reply);
-
-  std::string access_token;
-  RefreshRequestSignal refresh_request_signal;
-  bool waiting;
-  HttpExecuteReady callback;
+  virtual ~IHttpExecute() {}
 };
 
-#endif // OAUTH2FILTER_HH
+#endif

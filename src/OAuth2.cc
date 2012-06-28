@@ -32,9 +32,11 @@
 
 #include "json/json.h"
 
+#include "OAuth2.hh"
+
 #include "IHttpBackend.hh"
 #include "Exception.hh"
-#include "OAuth2.hh"
+#include "OAuth2Filter.hh"
 #include "Uri.hh"
 
 using namespace std;
@@ -51,8 +53,6 @@ OAuth2::OAuth2(IHttpBackend::Ptr backend, const OAuth2::Settings &settings)
     settings(settings)
 {
   verified_path = "/oauth-verfied";
-  oauth = OAuth2Filter::create();
-  backend->add_filter(oauth);
 }
 
 
@@ -67,6 +67,7 @@ OAuth2::init(AsyncOAuth2Result callback)
 {
   this->callback = callback;
   
+  backend->set_decorator_factory(shared_from_this());
   request_authorization_grant();
 }
 
@@ -76,9 +77,7 @@ OAuth2::init(std::string access_token, std::string refresh_token)
 {
   this->access_token = access_token;
   this->refresh_token = refresh_token;
-
-  //request_refresh_token();
-  oauth->set_access_token(access_token);
+  backend->set_decorator_factory(shared_from_this());
 }
 
 
@@ -228,10 +227,8 @@ OAuth2::on_access_token_ready(HttpReply::Ptr reply)
 
       if (ok && !root.isMember("error"))
         {
-          string access_token = root["access_token"].asString();
-
+          access_token = root["access_token"].asString();
           g_debug("access_token : %s", access_token.c_str());
-          oauth->set_access_token(access_token);
         }
 
       report_result(true);
@@ -272,7 +269,7 @@ OAuth2::request_refresh_token(bool sync)
         }
       else
         {
-          backend->request(request, boost::bind(&OAuth2::on_access_token_ready, this, _1));
+          backend->request(request, boost::bind(&OAuth2::on_refresh_token_ready, this, _1));
         }
     }
   catch(Exception &we)
@@ -308,10 +305,14 @@ OAuth2::on_refresh_token_ready(HttpReply::Ptr reply)
 
       if (ok && !root.isMember("error"))
         {
-          string access_token = root["access_token"].asString();
-
+          access_token = root["access_token"].asString();
           g_debug("access_token : %s", access_token.c_str());
-          oauth->set_access_token(access_token);
+
+          for(list<OAuth2Filter::Ptr>::iterator it = waiting_for_refresh.begin(); it != waiting_for_refresh.end(); it++)
+            {
+              (*it)->set_access_token(access_token);
+            }
+          waiting_for_refresh.clear();
         }
 
       report_result(true);
@@ -388,5 +389,41 @@ void
 OAuth2::report_result(bool success)
 {
   backend->stop_listen(verified_path);
-  callback(success);
+  if (!callback.empty())
+    {
+      callback(success);
+    }
 }
+
+
+IHttpExecute::Ptr
+OAuth2::create_decorator(IHttpExecute::Ptr execute)
+{
+  g_debug("OAuth2::create_decorator");
+  if (access_token != "")
+    {
+      OAuth2Filter::Ptr filter = OAuth2Filter::create(execute);
+      filter->signal_refresh_request().connect(boost::bind(&OAuth2::on_refresh_request, this, filter));
+      filter->set_access_token(access_token);
+      return filter;
+    }
+  else
+    {
+      g_debug("OAuth2::create_decorator: no token");
+      return execute;
+    }
+}
+
+
+void
+OAuth2::on_refresh_request(OAuth2Filter::Ptr filter)
+{
+  waiting_for_refresh.push_back(filter);
+  if (waiting_for_refresh.size() == 1)
+    {
+      // TODO: handle sync/ and mix
+      access_token = "";
+      request_refresh_token(filter->is_sync());
+    }
+}
+    

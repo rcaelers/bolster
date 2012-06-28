@@ -318,8 +318,8 @@ OAuthFilter::create_oauth_header(const string &http_method,
 }
 
 
-bool
-OAuthFilter::filter_http_request(HttpRequest::Ptr request)
+void
+OAuthFilter::filter(HttpRequest::Ptr request)
 {
   RequestParams parameters;
   string oauth_header;
@@ -332,9 +332,12 @@ OAuthFilter::filter_http_request(HttpRequest::Ptr request)
   if (oauth_header != "")
     {
       request->headers["Authorization"] = oauth_header;
-      return true;
     }
-  
-  return true;
 }
   
+
+IHttpExecute::Ptr
+OAuthFilter::create_decorator(IHttpExecute::Ptr executor)
+{
+  return Decorator::create(shared_from_this(), executor);
+}

@@ -25,11 +25,12 @@
 #include <map>
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
 
 #include "IHttpBackend.hh"
 #include "OAuth2Filter.hh"
 
-class OAuth2
+class OAuth2 : public IHttpDecoratorFactory, public boost::enable_shared_from_this<OAuth2>
 {
 public:
   typedef boost::shared_ptr<OAuth2> Ptr;
@@ -91,16 +92,18 @@ private:
 
   void request_refresh_token(bool sync = false);
   void on_refresh_token_ready(HttpReply::Ptr reply);
- 
+
   void parse_query(const std::string &query, RequestParams &params) const;
   const std::string parameters_to_string(const RequestParams &parameters) const;
   const std::string create_login_url(const std::string &redirect_uri, const RequestParams &parameters);
 
   void report_result(bool result);
+
+  IHttpExecute::Ptr create_decorator(IHttpExecute::Ptr execute);
+  void on_refresh_request(OAuth2Filter::Ptr filter);
   
 private:  
   IHttpBackend::Ptr backend;
-  OAuth2Filter::Ptr oauth;
   Settings settings;
 
   std::string callback_uri;
@@ -108,6 +111,7 @@ private:
   std::string refresh_token;
   
   AsyncOAuth2Result callback;
+  std::list<OAuth2Filter::Ptr> waiting_for_refresh;
   
   std::string verified_path;
 };

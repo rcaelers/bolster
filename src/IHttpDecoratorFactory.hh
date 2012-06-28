@@ -18,44 +18,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef OAUTH2FILTER_HH
-#define OAUTH2FILTER_HH
+#ifndef IHTTPDECORATORFACTORY_HH
+#define IHTTPDECORATORFACTORY_HH
 
-#include <string>
-#include <boost/signals2.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "HttpDecorator.hh"
-#include "HttpReply.hh"
+#include "IHttpExecute.hh"
 
-class OAuth2Filter : public HttpDecorator
+class IHttpDecoratorFactory
 {
 public:
-  typedef boost::shared_ptr<OAuth2Filter> Ptr;
-
-  typedef boost::signals2::signal<void()> RefreshRequestSignal;
+  typedef boost::shared_ptr<IHttpDecoratorFactory> Ptr;
   
-public:
-  static Ptr create(IHttpExecute::Ptr);
-
-  OAuth2Filter(IHttpExecute::Ptr executor);
-  void set_access_token(const std::string &acces_token);
-
-  RefreshRequestSignal &signal_refresh_request()
-  {
-    return refresh_request_signal;
-  }
-
-  virtual HttpReply::Ptr execute(HttpExecuteReady callback = 0);
-  
-private:
-  void filter();
-  void on_reply(HttpReply::Ptr reply);
-
-  std::string access_token;
-  RefreshRequestSignal refresh_request_signal;
-  bool waiting;
-  HttpExecuteReady callback;
+  virtual IHttpExecute::Ptr create_decorator(IHttpExecute::Ptr) = 0;
 };
 
-#endif // OAUTH2FILTER_HH
+#endif

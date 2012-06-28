@@ -18,13 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef HTTPREPLYSOUP_HH
-#define HTTPREPLYSOUP_HH
+#ifndef HTTPEXECUTESOUP_HH
+#define HTTPEXECUTESOUP_HH
 
 #include <string>
 #include <map>
 #include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
 
 #ifdef HAVE_GNOME
 #include <libsoup/soup-gnome.h>
@@ -35,22 +34,37 @@
 #include "HttpReply.hh"
 #include "IHttpBackend.hh"
 
-class HttpReplySoup : public HttpReply, public boost::enable_shared_from_this<HttpReplySoup>
+class HttpExecuteSoup : public IHttpExecute
 {
 public:
-  typedef boost::shared_ptr<HttpReplySoup> Ptr;
+  typedef boost::shared_ptr<HttpExecuteSoup> Ptr;
 
   static Ptr create(HttpRequest::Ptr request);
 
-  HttpReplySoup(HttpRequest::Ptr request);
+  HttpExecuteSoup(HttpRequest::Ptr request);
+  ~HttpExecuteSoup();
 
-  void init(SoupSession *session, IHttpBackend::HttpReplyCallback callback = 0);
+  virtual HttpReply::Ptr execute(IHttpExecute::HttpExecuteReady callback = 0);
+  virtual HttpRequest::Ptr get_request() const;
+  virtual bool is_sync() const;
+  
+  void init(SoupSession *session, bool sync);
   
 private:
-  IHttpBackend::HttpReplyCallback callback;
+  struct CallbackData
+  {
+    Ptr self;
+  };
 
-  SoupMessage *create_request_message() const;
+  SoupSession *session;
+  IHttpExecute::HttpExecuteReady callback;
+  HttpRequest::Ptr request;
+  HttpReply::Ptr reply;
+  bool sync;
   
+  SoupMessage *create_request_message();
+  void process_reply_message(SoupMessage *message);
+
   static void reply_ready_static(SoupSession *session, SoupMessage *message, gpointer user_data);
   void reply_ready(SoupSession *session, SoupMessage *message);
 };

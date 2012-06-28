@@ -18,42 +18,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef IHTTPFILTER_HH
-#define IHTTPFILTER_HH
+#ifndef HTTPDECORATOR_HH
+#define HTTPDECORATOR_HH
 
 #include <string>
 #include <map>
 #include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
+#include <boost/function.hpp>
 
-#include "HttpRequest.hh"
+#include "IHttpExecute.hh"
 
-class IHttpFilter
+class HttpDecorator : public IHttpExecute
 {
 public:
-  virtual ~IHttpFilter() {};
-  
-  typedef boost::shared_ptr<IHttpFilter> Ptr;
+  typedef boost::shared_ptr<HttpDecorator> Ptr;
+
+  HttpDecorator(IHttpExecute::Ptr executor) : executor(executor)
+  {
+  }
+
+  virtual ~HttpDecorator()
+  {
+  }
+
+  HttpReply::Ptr execute(IHttpExecute::HttpExecuteReady callback)
+  {
+    return executor->execute(callback);
+  }
+
+  HttpRequest::Ptr get_request() const
+  {
+    return executor->get_request();
+  }
+
+  bool is_sync() const
+  {
+    return executor->is_sync();
+  }
+    
+protected:
+  IHttpExecute::Ptr executor;
 };
-
-class IHttpRequestFilter : public IHttpFilter
-{
-public:
-  typedef boost::shared_ptr<IHttpRequestFilter> Ptr;
-
-public:
-  virtual bool filter_http_request(HttpRequest::Ptr request) = 0;
-};
-
-
-class IHttpErrorFilter : public IHttpFilter
-{
-public:
-  typedef boost::shared_ptr<IHttpErrorFilter> Ptr;
-
-public:
-  virtual bool filter_http_request(int error, const std::string &http_method, std::string &uri, std::string &body,
-                                   std::map<std::string, std::string> &headers) = 0;
-};
-
 
 #endif

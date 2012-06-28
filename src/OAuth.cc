@@ -55,21 +55,22 @@ OAuth::OAuth(IHttpBackend::Ptr backend, const OAuth::Settings &settings)
     settings(settings)
 {
   verified_path = "/oauth-verfied";
-  oauth = OAuthFilter::create();
-  backend->add_filter(oauth);
+  filter = OAuthFilter::create();
+
+  backend->set_decorator_factory(shared_from_this());
 }
 
 OAuth::~OAuth()
 {
   backend->stop_listen(verified_path);
-  oauth->set_custom_headers();
+  filter->set_custom_headers();
 }
 
 void
 OAuth::init(const string &consumer_key, const string &consumer_secret,
                     SuccessCallback success_cb, FailedCallback failure_cb)
 {
-  oauth->set_consumer(consumer_key, consumer_secret);
+  filter->set_consumer(consumer_key, consumer_secret);
 
   this->success_cb = success_cb;
   this->failure_cb = failure_cb;
@@ -91,7 +92,7 @@ OAuth::request_temporary_credentials()
       
       OAuthFilter::RequestParams parameters;
       parameters["oauth_callback"] = oauth_callback;
-      oauth->set_custom_headers(parameters);
+      filter->set_custom_headers(parameters);
 
       HttpRequest::Ptr request = HttpRequest::create();
       request->uri = settings.temporary_request_uri;
@@ -138,7 +139,7 @@ OAuth::on_temporary_credentials_ready(HttpReply::Ptr reply)
       token = response_parameters["oauth_token"];
       string secret = response_parameters["oauth_token_secret"];
 
-      oauth->set_token(token, secret);
+      filter->set_token(token, secret);
 
       request_resource_owner_authorization();
     }
@@ -251,7 +252,7 @@ OAuth::request_token(const string &verifier)
         {
           parameters["oauth_verifier"] = verifier;
         }
-      oauth->set_custom_headers(parameters);
+      filter->set_custom_headers(parameters);
 
       HttpRequest::Ptr request = HttpRequest::create();
       request->uri = settings.token_request_uri;
@@ -298,7 +299,7 @@ OAuth::on_token_ready(HttpReply::Ptr reply)
       g_debug("key %s", key.c_str());
       g_debug("Secret %s", secret.c_str());
       
-      oauth->set_token(key, secret);
+      filter->set_token(key, secret);
       success();
     }
   catch(Exception &oe)
@@ -334,7 +335,7 @@ OAuth::parse_query(const string &query, OAuthFilter::RequestParams &params) cons
 void OAuth::failure()
 {
   backend->stop_listen(verified_path);
-  oauth->set_custom_headers();
+  filter->set_custom_headers();
 
   failure_cb();
 }
@@ -343,7 +344,15 @@ void OAuth::failure()
 void OAuth::success()
 {
   backend->stop_listen(verified_path);
-  oauth->set_custom_headers();
+  filter->set_custom_headers();
 
   success_cb();
 }
+
+
+IHttpExecute::Ptr
+OAuth::create_decorator(IHttpExecute::Ptr executor)
+{
+  return filter->create_decorator(executor);
+}
+    

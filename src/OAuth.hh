@@ -25,11 +25,14 @@
 #include <map>
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
 
 #include "IHttpBackend.hh"
 #include "OAuthFilter.hh"
 
-class OAuth
+#include "IHttpExecute.hh"
+
+class OAuth : public IHttpDecoratorFactory, public boost::enable_shared_from_this<OAuth>
 {
 public:
   typedef boost::shared_ptr<OAuth> Ptr;
@@ -37,7 +40,7 @@ public:
   typedef boost::function<void () > SuccessCallback;
   typedef boost::function<void () > FailedCallback;
 
-  typedef IHttpBackend::HttpReplyCallback HttpReplyCallback;
+  typedef IHttpExecute::HttpExecuteReady HttpReplyCallback;
 
   struct Settings
   {
@@ -86,6 +89,8 @@ private:
                                              std::string &response_content_type, std::string &response_body);
   void on_token_ready(HttpReply::Ptr reply);
 
+  IHttpExecute::Ptr create_decorator(IHttpExecute::Ptr execute);
+  
   void parse_query(const std::string &query, OAuthFilter::RequestParams &params) const;
 
   void failure();
@@ -93,7 +98,7 @@ private:
   
 private:  
   IHttpBackend::Ptr backend;
-  OAuthFilter::Ptr oauth;
+  OAuthFilter::Ptr filter;
   Settings settings;
 
   std::string token;

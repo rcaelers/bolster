@@ -15,7 +15,6 @@
 #include "IHttpBackend.hh"
 #include "HttpBackendSoup.hh"
 #include "OAuth2.hh"
-#include "OAuth2Filter.hh"
 
 using namespace std;
 
@@ -26,6 +25,11 @@ on_pairing_result(bool success)
 {
 }
 
+void
+on_reply(HttpReply::Ptr reply)
+{
+  g_debug("google async : %d %s", reply->status, reply->body.c_str());
+}
 
 int main(int argc, char **argv)
 {
@@ -43,14 +47,17 @@ int main(int argc, char **argv)
 
   IHttpBackend::Ptr backend = sso->get_backend();
 
-  string response_body;
+  // string response_body;
 
+  //IHttpBackend::Ptr backend = HttpBackendSoup::create();
+  
   HttpRequest::Ptr request = HttpRequest::create();
+  //request->uri = "http://www.google.com/";
   request->uri = "https://docs.google.com/feeds/metadata/default?v=3";
   request->method = "GET";
 
-  HttpReply::Ptr reply = backend->request(request);
-  g_debug("google : %d %s", reply->status, reply->body.c_str());
+  HttpReply::Ptr reply = backend->request(request, boost::bind(on_reply, _1));
+  //g_debug("google : %d %s", reply->status, reply->body.c_str());
   
   g_main_loop_run(loop);
   g_main_loop_unref(loop);
