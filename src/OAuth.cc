@@ -38,7 +38,6 @@
 #endif
 
 #include "IHttpBackend.hh"
-#include "Exception.hh"
 #include "OAuth.hh"
 #include "Uri.hh"
 
@@ -62,7 +61,10 @@ OAuth::OAuth(IHttpBackend::Ptr backend, const OAuth::Settings &settings)
 
 OAuth::~OAuth()
 {
-  backend->stop_listen(verified_path);
+  if (server)
+    {
+      server->stop();
+    }
   filter->set_custom_headers();
 }
 
@@ -85,8 +87,7 @@ OAuth::request_temporary_credentials()
   try
     {
       int port = 0;
-      backend->listen(boost::bind(&OAuth::on_resource_owner_authorization_ready, this, _1, _2, _3, _4, _5),
-                      verified_path, port);
+      server = backend->listen(verified_path, port, boost::bind(&OAuth::on_resource_owner_authorization_ready, this, _1));
 
       oauth_callback = boost::str(boost::format("http://127.0.0.1:%1%%2%") % port % verified_path);
       
@@ -100,7 +101,7 @@ OAuth::request_temporary_credentials()
       
       backend->request(request, boost::bind(&OAuth::on_temporary_credentials_ready, this, _1));
     }
-  catch(Exception)
+  catch(...)
     {
       failure();
     }
@@ -116,13 +117,13 @@ OAuth::on_temporary_credentials_ready(HttpReply::Ptr reply)
       if (reply->status != 200)
         {
           g_debug("Invalid response for temporary credentials %d", reply->status);
-          throw Exception();
+          throw std::exception();
         }
 
       if (reply->body == "")
         {
           g_debug("Empty response for temporary credentials");
-          throw Exception();
+          throw std::exception();
         }          
       
       OAuthFilter::RequestParams response_parameters;
@@ -132,7 +133,7 @@ OAuth::on_temporary_credentials_ready(HttpReply::Ptr reply)
       if (response_parameters["oauth_callback_confirmed"] != "true")
         {
           g_debug("Callback not confirmed:%s", response_parameters["oauth_callback_confirmed"].c_str());
-          throw Exception();
+          throw std::exception();
         }
 #endif
       
@@ -143,7 +144,7 @@ OAuth::on_temporary_credentials_ready(HttpReply::Ptr reply)
 
       request_resource_owner_authorization();
     }
-  catch(Exception)
+  catch(...)
     {
       failure();
     }
@@ -158,7 +159,7 @@ OAuth::request_resource_owner_authorization()
       if (program == NULL)
         {
           g_debug("Cannot find xdg-open");
-          throw Exception();
+          throw std::exception();
         }
 
       string command = boost::str(boost::format("%1% %2%?oauth_token=%3%&oauth_callback=%4%")
@@ -169,51 +170,46 @@ OAuth::request_resource_owner_authorization()
       if (!g_spawn_command_line_sync(command.c_str(), NULL, NULL, &exit_code, &error))
         {
           g_debug("Failed to execute xdg-open");
-          throw Exception();
+          throw std::exception();
         }
 
       if (WEXITSTATUS(exit_code) != 0)
         {
           g_debug("xdg-open returned an error exit-code");
-          throw Exception();
+          throw std::exception();
         }
     }
-  catch(Exception)
+  catch(...)
     {
       failure();
     }
 }
 
 
-void
-OAuth::on_resource_owner_authorization_ready(const string &method, const string &query, const string &body,
-                                                     string &response_content_type, string &response_body)
+HttpReply::Ptr
+OAuth::on_resource_owner_authorization_ready(HttpRequest::Ptr request)
 {
-  (void) body;
-
-  g_debug("Body : %s", body.c_str());
-  g_debug("Q : %s", query.c_str());
-  g_debug("M : %s", method.c_str());
+  HttpReply::Ptr reply = HttpReply::create(request);
   
   try
     {
-      response_content_type = "text/html";
-      response_body = settings.failure_html;
+      reply->content_type = "text/html";
+      reply->body = settings.failure_html;
       
-      if (method != "GET")
+      if (request->method != "GET")
         {
           g_debug("Resource owner authorization only supports GET callback");
-          throw Exception();
+          throw std::exception();
         }          
 
-      if (query == "")
+      if (request->uri == "")
         {
           g_debug("Empty response for resource owner authorization");
-          throw Exception();
+          throw std::exception();
         }          
 
       OAuthFilter::RequestParams response_parameters;
-      parse_query(query, response_parameters);
+      parse_query(request->uri, response_parameters);
 
       string token = response_parameters["oauth_token"];
       string verifier = response_parameters["oauth_verifier"];
@@ -221,22 +217,25 @@ OAuth::on_resource_owner_authorization_ready(const string &method, const string 
       if (token == "")
         {
           g_debug("Token must be set");
-          throw Exception();
+          throw std::exception();
         }
 
       if (token != this->token)
         {
           g_debug("Reply for incorrect");
-          throw Exception();
+          throw std::exception();
         }
-      
-      response_body = settings.success_html;
+
+      reply->body = settings.success_html;
+
       request_token(verifier);
     }
-  catch(Exception &we)
+  catch(...)
     {
       failure();
     }
+
+  return reply;
 }
 
 
@@ -260,7 +259,7 @@ OAuth::request_token(const string &verifier)
       
       backend->request(request, boost::bind(&OAuth::on_token_ready, this, _1));
     }
-  catch(Exception &we)
+  catch(...)
     {
       failure();
     }
@@ -275,13 +274,13 @@ OAuth::on_token_ready(HttpReply::Ptr reply)
       if (reply->status != 200)
         {
           g_debug("Invalid response for token %d", reply->status);
-          throw Exception();
+          throw std::exception();
         }
 
       if (reply->body == "")
         {
           g_debug("Empty response for token");
-          throw Exception();
+          throw std::exception();
         }          
       
       OAuthFilter::RequestParams response_parameters;
@@ -293,7 +292,7 @@ OAuth::on_token_ready(HttpReply::Ptr reply)
       if (key == "" || secret == "")
         {
           g_debug("No token/secret received");
-          throw Exception();
+          throw std::exception();
         }
 
       g_debug("key %s", key.c_str());
@@ -302,7 +301,7 @@ OAuth::on_token_ready(HttpReply::Ptr reply)
       filter->set_token(key, secret);
       success();
     }
-  catch(Exception &oe)
+  catch(...)
     {
       failure();
     }
@@ -334,7 +333,10 @@ OAuth::parse_query(const string &query, OAuthFilter::RequestParams &params) cons
 
 void OAuth::failure()
 {
-  backend->stop_listen(verified_path);
+  if (server)
+    {
+      server->stop();
+    }
   filter->set_custom_headers();
 
   failure_cb();
@@ -343,7 +345,10 @@ void OAuth::failure()
 
 void OAuth::success()
 {
-  backend->stop_listen(verified_path);
+  if (server)
+    {
+      server->stop();
+    }
   filter->set_custom_headers();
 
   success_cb();

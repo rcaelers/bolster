@@ -45,50 +45,23 @@ public:
  	HttpBackendSoup();
   virtual ~HttpBackendSoup();
 
+  bool init(const std::string &user_agent);
+  
   virtual void set_decorator_factory(IHttpDecoratorFactory::Ptr factory);
 
   virtual HttpReply::Ptr request(HttpRequest::Ptr request);
   virtual HttpReply::Ptr request(HttpRequest::Ptr request, const IHttpExecute::HttpExecuteReady callback);
-  
-  virtual void listen(const HttpRequestCallback callback, const std::string &path, int &port);
+  virtual IHttpServer::Ptr listen(const std::string &path, int &port, IHttpServer::HttpServerCallback callback);
 
-  virtual void stop_listen(const std::string &path);
-  
 private:
-
-  class AsyncServerData
-  {
-  public:
-    AsyncServerData(HttpBackendSoup *backend, HttpRequestCallback callback)
-      : callback(callback), backend(backend)
-    {
-    }
-
-    static void cb(SoupServer *, SoupMessage *, const char *, GHashTable *, SoupClientContext *, gpointer);
-
-    HttpRequestCallback callback;
-    
-  private:
-    HttpBackendSoup *backend;
-  };
-  
-  void server_callback(SoupServer *server, SoupMessage *msg, const char *path, GHashTable *query, SoupClientContext *context, AsyncServerData *data);
-  
-  void init_async();
-  void init_sync();
-
-
-  void apply_request_filters(HttpRequest::Ptr request);
   
 private:
   SoupSession *sync_session;
   SoupSession *async_session;
   SoupURI *proxy;
-
-  typedef std::map<std::string, SoupServer*> ServerList;
-  IHttpDecoratorFactory::Ptr decorator_factory;
+  std::string user_agent;
   
-  ServerList servers;
+  IHttpDecoratorFactory::Ptr decorator_factory;
 };
 
 #endif

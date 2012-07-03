@@ -28,6 +28,7 @@
 #include <boost/bind.hpp>
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "OAuth2.hh"
 #include "OAuth2Filter.hh"
@@ -89,11 +90,11 @@ GoogleAuth::~GoogleAuth()
 
 
 void
-GoogleAuth::on_auth_result(bool success)
+GoogleAuth::on_auth_result(OAuth2::AuthResult result)
 {
   string access_token;
   string refresh_token;
-  int valid_until;
+  time_t valid_until;
   
   workflow->get_tokens(access_token, refresh_token, valid_until);
   
@@ -104,6 +105,7 @@ GoogleAuth::on_auth_result(bool success)
                         password.c_str(), NULL, on_password_stored, this,
                         NULL);
 
+  // TODO:
   callback(true);
 }
 
@@ -114,7 +116,11 @@ GoogleAuth::init(AsyncAuthResult callback)
 
   this->callback = callback;
 
-  backend = HttpBackendSoup::create();
+  HttpBackendSoup::Ptr backend_soup = HttpBackendSoup::create();
+  backend_soup->init("Bolster");
+
+  backend = backend_soup;
+  
   workflow = OAuth2::create(backend, oauth_settings);
 
   secret_password_lookup(GOOGLE_SCHEMA, NULL, on_password_lookup, this, NULL);
@@ -147,18 +153,22 @@ GoogleAuth::on_password_lookup(GObject *source, GAsyncResult *result, gpointer d
           elements[0].length() > 0 &&
           elements[1].length() > 0)
         {
-          self->workflow->init(elements[0], elements[1]);
+          time_t valid_until = 0;
+
+          try
+            {
+              valid_until = boost::lexical_cast<int>(elements[2]);
+            }
+          catch(boost::bad_lexical_cast &) {}
+          g_debug("secret_password_lookup: valid=%d", (int)valid_until);
+          
+          self->workflow->init(elements[0], elements[1], valid_until, boost::bind(&GoogleAuth::on_auth_result, self, _1));
           success = true;
         }
       secret_password_free(password);
     }
 
-  if (success)
-    {
-      g_debug("secret_password_lookup: success");
-      self->callback(true);
-    }
-  else
+  if (!success)
     {
       g_debug("secret_password_lookup: obtain access");
       self->workflow->init(boost::bind(&GoogleAuth::on_auth_result, self, _1));

@@ -29,14 +29,8 @@
 #include <boost/algorithm/string.hpp>
 
 #include <glib.h>
-
 #include "json/json.h"
 
-#include "OAuth2.hh"
-
-#include "IHttpBackend.hh"
-#include "Exception.hh"
-#include "OAuth2Filter.hh"
 #include "Uri.hh"
 
 using namespace std;
@@ -53,18 +47,21 @@ OAuth2::OAuth2(IHttpBackend::Ptr backend, const OAuth2::Settings &settings)
     settings(settings),
     valid_until(0)
 {
-  verified_path = "/oauth-verfied";
+  callback_uri_path = "/oauth2";
 }
 
 
 OAuth2::~OAuth2()
 {
-  backend->stop_listen(verified_path);
+  if (server)
+    {
+      server->stop();
+    }
 }
 
 
 void
-OAuth2::init(AsyncOAuth2Result callback)
+OAuth2::init(AuthReadyCallback callback)
 {
   this->callback = callback;
   
@@ -74,21 +71,36 @@ OAuth2::init(AsyncOAuth2Result callback)
 
 
 void
-OAuth2::init(std::string access_token, std::string refresh_token)
+OAuth2::init(std::string access_token, std::string refresh_token, time_t valid_until, AuthReadyCallback callback)
 {
+  this->callback = callback;
+  
   this->access_token = access_token;
   this->refresh_token = refresh_token;
+  this->valid_until = valid_until;
+  
   backend->set_decorator_factory(shared_from_this());
+  
+  if (valid_until + 60 < time(NULL))
+    {
+      g_debug("OAuth2::init: token expired");
+      request_refresh_token(false);
+    }
+  else
+    {
+      report_async_result(Ok);
+    }
 }
 
 
 void
-OAuth2::get_tokens(std::string &access_token, std::string &refresh_token, int &valid_until)
+OAuth2::get_tokens(std::string &access_token, std::string &refresh_token, time_t &valid_until)
 {
   access_token = this->access_token;
   refresh_token = this->refresh_token;
-  valid_until = 0; // TODO:
+  valid_until = this->valid_until;
 }
+
 
 void
 OAuth2::request_authorization_grant()
@@ -96,71 +108,65 @@ OAuth2::request_authorization_grant()
   try
     {
       int port = 0;
-      backend->listen(boost::bind(&OAuth2::on_authorization_grant_ready, this, _1, _2, _3, _4, _5),
-                      verified_path, port);
+      server = backend->listen(callback_uri_path, port, boost::bind(&OAuth2::on_authorization_grant_ready, this, _1));
 
-      callback_uri = boost::str(boost::format("http://127.0.0.1:%1%%2%") % port % verified_path);
+      callback_uri = boost::str(boost::format("http://127.0.0.1:%1%%2%") % port % callback_uri_path);
       
       gchar *program = g_find_program_in_path("xdg-open");
       if (program == NULL)
         {
           g_debug("Cannot find xdg-open");
-          throw Exception();
+          throw std::exception();
         }
 
       RequestParams parameters;
       string command = string(program) + " " + create_login_url(callback_uri, parameters);
 
-      gint exit_code;
+      gint exit_code = 0;
       GError *error = NULL;
       if (!g_spawn_command_line_sync(command.c_str(), NULL, NULL, &exit_code, &error))
         {
           g_debug("Failed to execute xdg-open: %s %s", command.c_str(), error->message);
-          throw Exception();
+          throw std::exception();
         }
 
       if (WEXITSTATUS(exit_code) != 0)
         {
           g_debug("xdg-open returned an error exit-code");
-          throw Exception();
+          throw std::exception();
         }
     }
-  catch(Exception)
+  catch(...)
     {
-      report_result(false);
+      report_async_result(Failed);
     }
 }
 
 
-void
-OAuth2::on_authorization_grant_ready(const string &method, const string &query, const string &body,
-                                             string &response_content_type, string &response_body)
+HttpReply::Ptr
+OAuth2::on_authorization_grant_ready(HttpRequest::Ptr request)
 {
-  (void) body;
+  HttpReply::Ptr reply = HttpReply::create(request);
 
-  g_debug("Body : %s", body.c_str());
-  g_debug("Q : %s", query.c_str());
-  g_debug("M : %s", method.c_str());
-  
   try
     {
-      response_content_type = "text/html";
-      response_body = settings.failure_html;
+      reply->content_type = "text/html";
+      reply->body = settings.failure_html;
       
-      if (method != "GET")
+      if (request->method != "GET")
         {
           g_debug("Resource owner authorization only supports GET callback");
-          throw Exception();
+          throw std::exception();
         }          
 
-      if (query == "")
+      if (request->uri == "")
         {
-          g_debug("Empty response for resource owner authorization");
-          throw Exception();
+          g_debug("Empty response for authorization grant");
+          throw std::exception();
         }          
 
       RequestParams response_parameters;
-      parse_query(query, response_parameters);
+      parse_query(request->uri, response_parameters);
 
       // TODO: handle error
       string code = response_parameters["code"];
@@ -168,24 +174,24 @@ OAuth2::on_authorization_grant_ready(const string &method, const string &query, 
       if (code == "")
         {
           g_debug("Code must be set");
-          throw Exception();
+          throw std::exception();
         }
       
-      response_body = settings.success_html;
+      reply->body = settings.success_html;
       request_access_token(code);
     }
-  catch(Exception &we)
+  catch(...)
     {
-      report_result(false);
+      report_async_result(Failed);
     }
+
+  return reply;
 }
 
 
 void
 OAuth2::request_access_token(const string &code)
 {
-  g_debug("request_access_token");
-
   try
     {
       string body = boost::str(boost::format("code=%1%&client_id=%2%&client_secret=%3%&redirect_uri=%4%&grant_type=authorization_code")
@@ -194,7 +200,6 @@ OAuth2::request_access_token(const string &code)
                                % settings.client_secret
                                % Uri::escape(callback_uri)
                                );
-      g_debug("body %s", body.c_str());
 
       HttpRequest::Ptr request = HttpRequest::create();
       request->uri = settings.token_endpoint;
@@ -204,9 +209,9 @@ OAuth2::request_access_token(const string &code)
 
       backend->request(request, boost::bind(&OAuth2::on_access_token_ready, this, _1));
     }
-  catch(Exception &we)
+  catch(...)
     {
-      report_result(false);
+      report_async_result(Failed);
     }
 }
 
@@ -214,20 +219,20 @@ OAuth2::request_access_token(const string &code)
 void
 OAuth2::on_access_token_ready(HttpReply::Ptr reply)
 {
+  AuthResult result = Failed;
+  
   try
     {
-      g_debug("status = %d, resp = %s", reply->status, reply->body.c_str());
-      
       if (reply->status != 200)
         {
           g_debug("Invalid response for token %d", reply->status);
-          throw Exception();
+          throw std::exception();
         }
 
       if (reply->body == "")
         {
           g_debug("Empty response for token");
-          throw Exception();
+          throw std::exception();
         }          
       
       Json::Value root;
@@ -241,14 +246,15 @@ OAuth2::on_access_token_ready(HttpReply::Ptr reply)
           valid_until = root["expires_in"].asInt() + time(NULL);
           
           g_debug("access_token : %s", access_token.c_str());
-        }
 
-      report_result(true);
+          result = Ok;
+        }
     }
-  catch(Exception &oe)
+  catch(...)
     {
-      report_result(false);
     }
+
+  report_async_result(result);
 }
 
 
@@ -256,6 +262,7 @@ void
 OAuth2::request_refresh_token(bool sync)
 {
   g_debug("request_refresh_token");
+  access_token = "";
 
   try
     {
@@ -284,17 +291,18 @@ OAuth2::request_refresh_token(bool sync)
           backend->request(request, boost::bind(&OAuth2::on_refresh_token_ready, this, _1));
         }
     }
-  catch(Exception &we)
+  catch(...)
     {
-      report_result(false);
+      report_async_result(Failed);
     }
 }
-
 
 
 void
 OAuth2::on_refresh_token_ready(HttpReply::Ptr reply)
 {
+  bool success = false;
+  
   try
     {
       g_debug("status = %d, resp = %s", reply->status, reply->body.c_str());
@@ -302,13 +310,13 @@ OAuth2::on_refresh_token_ready(HttpReply::Ptr reply)
       if (reply->status != 200)
         {
           g_debug("Invalid response for token %d", reply->status);
-          throw Exception();
+          throw std::exception();
         }
 
       if (reply->body == "")
         {
           g_debug("Empty response for token");
-          throw Exception();
+          throw std::exception();
         }          
       
       Json::Value root;
@@ -318,7 +326,6 @@ OAuth2::on_refresh_token_ready(HttpReply::Ptr reply)
       if (ok && !root.isMember("error"))
         {
           access_token = root["access_token"].asString();
-          refresh_token = root["refresh_token"].asString();
           valid_until = root["expires_in"].asInt() + time(NULL);
           
           g_debug("access_token : %s", access_token.c_str());
@@ -330,11 +337,11 @@ OAuth2::on_refresh_token_ready(HttpReply::Ptr reply)
           waiting_for_refresh.clear();
         }
 
-      report_result(true);
+      report_async_result(Ok);
     }
-  catch(Exception &oe)
+  catch(...)
     {
-      report_result(false);
+      report_async_result(Failed);
     }
 }
 
@@ -401,12 +408,15 @@ OAuth2::parse_query(const string &query, RequestParams &params) const
 
 
 void
-OAuth2::report_result(bool success)
+OAuth2::report_async_result(AuthResult result)
 {
-  backend->stop_listen(verified_path);
+  if (server)
+    {
+      server->stop();
+    }
   if (!callback.empty())
     {
-      callback(success);
+      callback(result);
     }
 }
 
@@ -436,9 +446,7 @@ OAuth2::on_refresh_request(OAuth2Filter::Ptr filter)
   waiting_for_refresh.push_back(filter);
   if (waiting_for_refresh.size() == 1)
     {
-      // TODO: handle sync/ and mix
-      access_token = "";
+      // TODO: handle sync / and mix sync+async
       request_refresh_token(filter->is_sync());
     }
 }
-    

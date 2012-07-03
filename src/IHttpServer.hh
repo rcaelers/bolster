@@ -1,4 +1,4 @@
-// Copyright (C) 2010, 2011 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,24 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef HTTPBACKENDEXCEPTION_HH
-#define HTTPBACKENDEXCEPTION_HH
+#ifndef IHTTPSERVER_HH
+#define IHTTPSERVER_HH
 
 #include <string>
-#include "Exception.hh"
+#include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
+#include <boost/function.hpp>
 
-class HttpBackendException : public Exception
+#include "HttpRequest.hh"
+#include "HttpReply.hh"
 
+class IHttpServer : public boost::enable_shared_from_this<IHttpServer>
 {
 public:
-  explicit HttpBackendException(const std::string &detail)
-    : Exception(detail)
-  {
-  }
+  typedef boost::shared_ptr<IHttpServer> Ptr;
+  typedef boost::function<HttpReply::Ptr (HttpRequest::Ptr reply) > HttpServerCallback;
+  
+  virtual ~IHttpServer() {}
 
-  virtual ~HttpBackendException() throw()
-  {
-  }
+  virtual void stop() = 0;
 };
 
-#endif // HTTPBACKENDEXCEPTION_HH
+#endif

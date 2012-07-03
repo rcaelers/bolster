@@ -8,6 +8,7 @@ lib_LTLIBRARIES = 	libbolster.la
 
 libbolster_la_SOURCES = HttpBackendSoup.cc \
 			HttpExecuteSoup.cc \
+			HttpServerSoup.cc \
 			HttpReply.cc \
 			HttpRequest.cc \
 			OAuth2.cc \

@@ -31,7 +31,6 @@
 
 #include "OAuth2Filter.hh"
 #include "OAuth2.hh"
-#include "Exception.hh"
 
 #ifdef __cplusplus
 extern "C" {
@@ -65,7 +64,7 @@ public:
   }
   
 private:
-  void on_auth_result(bool ok);
+  void on_auth_result(OAuth2::AuthResult result);
 
   static void on_password_lookup(GObject *source, GAsyncResult *result, gpointer data);
   static void on_password_stored(GObject *source, GAsyncResult *result, gpointer data);

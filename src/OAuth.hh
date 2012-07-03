@@ -85,8 +85,7 @@ private:
   void request_token(const std::string &verifier);
 
   void on_temporary_credentials_ready(HttpReply::Ptr reply);
-  void on_resource_owner_authorization_ready(const std::string &method, const std::string &query, const std::string &body,
-                                             std::string &response_content_type, std::string &response_body);
+  HttpReply::Ptr on_resource_owner_authorization_ready(HttpRequest::Ptr request);
   void on_token_ready(HttpReply::Ptr reply);
 
   IHttpExecute::Ptr create_decorator(IHttpExecute::Ptr execute);
@@ -99,6 +98,8 @@ private:
 private:  
   IHttpBackend::Ptr backend;
   OAuthFilter::Ptr filter;
+  IHttpServer::Ptr server;
+  
   Settings settings;
 
   std::string token;

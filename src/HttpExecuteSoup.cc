@@ -28,8 +28,6 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include "HttpBackendException.hh"
-
 using namespace std;
 
 HttpExecuteSoup::Ptr
@@ -106,7 +104,7 @@ HttpExecuteSoup::create_request_message()
   SoupMessage *message = soup_message_new(request->method.c_str(), request->uri.c_str());
   if (message == NULL)
     {
-      throw HttpBackendException("Cannot create HTTP request: " + request->method + " " + request->uri);
+      throw std::exception(); // HttpBackendException("Cannot create HTTP request: " + request->method + " " + request->uri);
     }
 
   if (request->body != "")

@@ -1,4 +1,4 @@
-// Copyright (C) 2010, 2011, 2012 by Rob Caelers <robc@krandor.nl>
+// Copyright (C) 2012 by Rob Caelers <robc@krandor.nl>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,32 +18,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef IHTTPBACKEND_HH
-#define IHTTPBACKEND_HH
+#ifndef HTTPSERVERSOUP_HH
+#define HTTPSERVERSOUP_HH
 
 #include <string>
-#include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "HttpRequest.hh"
-#include "HttpReply.hh"
-#include "IHttpExecute.hh"
-#include "IHttpServer.hh"
-#include "IHttpDecoratorFactory.hh"
+#ifdef HAVE_GNOME
+#include <libsoup/soup-gnome.h>
+#else
+#include <libsoup/soup.h>
+#endif
 
-class IHttpBackend
+#include "IHttpServer.hh"
+
+class HttpServerSoup : public IHttpServer
 {
 public:
-  typedef boost::shared_ptr<IHttpBackend> Ptr;
+  typedef boost::shared_ptr<HttpServerSoup> Ptr;
+
+  static Ptr create(const HttpServerCallback callback, const std::string &user_agent, const std::string &path);
 
 public:
-  virtual ~IHttpBackend() {}
+ 	HttpServerSoup(const HttpServerCallback callback, const std::string &user_agent, const std::string &path);
+  virtual ~HttpServerSoup();
 
-  virtual void set_decorator_factory(IHttpDecoratorFactory::Ptr factory) = 0;
+  virtual void stop();
+  int start();
+  
+private:
+  static void server_callback_static(SoupServer *server, SoupMessage *message, const char *path,
+                                     GHashTable *query, SoupClientContext *context, gpointer data);
 
-  virtual HttpReply::Ptr request(HttpRequest::Ptr request) = 0;
-  virtual HttpReply::Ptr request(HttpRequest::Ptr request, const IHttpExecute::HttpExecuteReady callback) = 0;
-  virtual IHttpServer::Ptr listen(const std::string &path, int &port, IHttpServer::HttpServerCallback callback) = 0;
+  void server_callback(SoupServer *, SoupMessage *message, const char *path,
+                       GHashTable *query, SoupClientContext *context);
+  
+private:
+  HttpServerCallback callback;
+  std::string user_agent;
+  std::string path;
+  int port;
+  SoupServer *server;
 };
 
 #endif
