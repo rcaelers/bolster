@@ -78,6 +78,7 @@ public:
   void init(AsyncOAuth2Result callback);
   void init(std::string access_token, std::string refresh_token);
 
+  void get_tokens(std::string &access_token, std::string &refresh_token, int &valid_until);
   
 private:
   typedef std::map<std::string, std::string> RequestParams;
@@ -109,6 +110,7 @@ private:
   std::string callback_uri;
   std::string access_token;
   std::string refresh_token;
+  time_t valid_until;
   
   AsyncOAuth2Result callback;
   std::list<OAuth2Filter::Ptr> waiting_for_refresh;

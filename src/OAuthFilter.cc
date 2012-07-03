@@ -27,6 +27,7 @@
 #include <sstream>
 #include <string.h>
 #include <list>
+#include <vector>
 #include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 

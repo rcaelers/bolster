@@ -26,6 +26,8 @@
 
 #include <glib.h>
 #include <boost/bind.hpp>
+#include <boost/format.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "OAuth2.hh"
 #include "OAuth2Filter.hh"
@@ -33,6 +35,22 @@
 #include "Uri.hh"
 
 using namespace std;
+
+const SecretSchema *
+google_get_schema (void)
+{
+    static const SecretSchema the_schema = {
+        "org.krandor.Password", SECRET_SCHEMA_NONE,
+        {
+            {  "number", SECRET_SCHEMA_ATTRIBUTE_INTEGER },
+            {  "string", SECRET_SCHEMA_ATTRIBUTE_STRING },
+            {  "even", SECRET_SCHEMA_ATTRIBUTE_BOOLEAN },
+            {  "NULL", (SecretSchemaAttributeType)0 },
+        }
+    };
+    return &the_schema;
+}
+
 
 GoogleAuth::Ptr
 GoogleAuth::create()
@@ -73,40 +91,93 @@ GoogleAuth::~GoogleAuth()
 void
 GoogleAuth::on_auth_result(bool success)
 {
-  callback(success);
-}
+  string access_token;
+  string refresh_token;
+  int valid_until;
+  
+  workflow->get_tokens(access_token, refresh_token, valid_until);
+  
+  string password = boost::str(boost::format("%1%:%2%:%3%") % access_token % refresh_token % valid_until);
+  g_debug("on_auth_result: %s", password.c_str());
 
+  secret_password_store(GOOGLE_SCHEMA, SECRET_COLLECTION_DEFAULT, "OAuth2",
+                        password.c_str(), NULL, on_password_stored, this,
+                        NULL);
+
+  callback(true);
+}
 
 void
 GoogleAuth::init(AsyncAuthResult callback)
 {
-  this->callback = callback;;
-  
-  try
-    {
-      backend = HttpBackendSoup::create();
-      workflow = OAuth2::create(backend, oauth_settings);
+  g_debug("GoogleAuth::init");
 
-      workflow->init(boost::bind(&GoogleAuth::on_auth_result, this, _1));
-    }
-  catch (Exception &e)
+  this->callback = callback;
+
+  backend = HttpBackendSoup::create();
+  workflow = OAuth2::create(backend, oauth_settings);
+
+  secret_password_lookup(GOOGLE_SCHEMA, NULL, on_password_lookup, this, NULL);
+}
+ 
+
+void
+GoogleAuth::on_password_lookup(GObject *source, GAsyncResult *result, gpointer data)
+{
+  GoogleAuth *self = (GoogleAuth *)data;
+  GError *error = NULL;
+
+  bool success = false;
+  gchar *password = secret_password_lookup_finish(result, &error);
+
+  if (error != NULL)
     {
-      callback(false);
+      g_debug("secret_password_lookup: %s", error->message);
+      g_error_free(error);
+    }
+
+  else if (password != NULL)
+    {
+      g_debug("secret_password_lookup: passwd=%s", password);
+
+      vector<string> elements;
+      boost::split(elements, password, boost::is_any_of(":"));
+  
+      if (elements.size() == 3 &&
+          elements[0].length() > 0 &&
+          elements[1].length() > 0)
+        {
+          self->workflow->init(elements[0], elements[1]);
+          success = true;
+        }
+      secret_password_free(password);
+    }
+
+  if (success)
+    {
+      g_debug("secret_password_lookup: success");
+      self->callback(true);
+    }
+  else
+    {
+      g_debug("secret_password_lookup: obtain access");
+      self->workflow->init(boost::bind(&GoogleAuth::on_auth_result, self, _1));
     }
 }
 
 
 void
-GoogleAuth::init(string access_token, string refresh_token)
+GoogleAuth::on_password_stored(GObject *source, GAsyncResult *result, gpointer data)
 {
-  try
-    {
-      backend = HttpBackendSoup::create();
+  GoogleAuth *self = (GoogleAuth *)data;
+  GError *error = NULL;
 
-      workflow = OAuth2::create(backend, oauth_settings);
-      workflow->init(access_token, refresh_token);
-    }
-  catch (Exception &e)
+  g_debug("secret_password_store");
+  
+  secret_password_store_finish(result, &error);
+  if (error != NULL)
     {
+      g_debug("secret_password_store: %s", error->message);
+      g_error_free(error);
     }
 }

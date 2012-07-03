@@ -50,7 +50,8 @@ OAuth2::create(IHttpBackend::Ptr backend, const Settings &settings)
 
 OAuth2::OAuth2(IHttpBackend::Ptr backend, const OAuth2::Settings &settings)
   : backend(backend),
-    settings(settings)
+    settings(settings),
+    valid_until(0)
 {
   verified_path = "/oauth-verfied";
 }
@@ -80,6 +81,14 @@ OAuth2::init(std::string access_token, std::string refresh_token)
   backend->set_decorator_factory(shared_from_this());
 }
 
+
+void
+OAuth2::get_tokens(std::string &access_token, std::string &refresh_token, int &valid_until)
+{
+  access_token = this->access_token;
+  refresh_token = this->refresh_token;
+  valid_until = 0; // TODO:
+}
 
 void
 OAuth2::request_authorization_grant()
@@ -228,6 +237,9 @@ OAuth2::on_access_token_ready(HttpReply::Ptr reply)
       if (ok && !root.isMember("error"))
         {
           access_token = root["access_token"].asString();
+          refresh_token = root["refresh_token"].asString();
+          valid_until = root["expires_in"].asInt() + time(NULL);
+          
           g_debug("access_token : %s", access_token.c_str());
         }
 
@@ -306,6 +318,9 @@ OAuth2::on_refresh_token_ready(HttpReply::Ptr reply)
       if (ok && !root.isMember("error"))
         {
           access_token = root["access_token"].asString();
+          refresh_token = root["refresh_token"].asString();
+          valid_until = root["expires_in"].asInt() + time(NULL);
+          
           g_debug("access_token : %s", access_token.c_str());
 
           for(list<OAuth2Filter::Ptr>::iterator it = waiting_for_refresh.begin(); it != waiting_for_refresh.end(); it++)

@@ -27,10 +27,24 @@
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include <secret/secret.h>
+
 #include "OAuth2Filter.hh"
 #include "OAuth2.hh"
 #include "Exception.hh"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+  const SecretSchema * google_get_schema(void) G_GNUC_CONST;
+
+#define GOOGLE_SCHEMA  google_get_schema()
+
+#ifdef __cplusplus
+}
+#endif
+  
 class GoogleAuth
 {
 public:
@@ -51,8 +65,11 @@ public:
   }
   
 private:
-  void on_auth_result(bool success);
+  void on_auth_result(bool ok);
 
+  static void on_password_lookup(GObject *source, GAsyncResult *result, gpointer data);
+  static void on_password_stored(GObject *source, GAsyncResult *result, gpointer data);
+  
 private:  
   OAuth2::Ptr workflow;
   IHttpBackend::Ptr backend;

@@ -57,3 +57,11 @@
 *~
 /build
 /old
+.libs
+*.lo
+*.o
+*.Po
+*.Plo
+*.la
+Makefile
+Makefile.in
